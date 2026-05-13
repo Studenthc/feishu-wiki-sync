@@ -62,7 +62,7 @@ async function main() {
 }
 
 async function createWikiDoc(spaceId: string, title: string, content: string) {
-  const tempFile = `/tmp/feishu-wiki-${Date.now()}.md`;
+  const tempFile = `./temp-wiki-${Date.now()}.md`;
   await fs.writeFile(tempFile, content, "utf-8");
   
   const cmd = `lark-cli docs +create --title "${title}" --markdown @${tempFile} --wiki-space ${spaceId}`;
