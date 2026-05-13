@@ -62,18 +62,14 @@ async function main() {
 }
 
 async function createWikiDoc(spaceId: string, title: string, content: string) {
-  const tempFile = `/tmp/feishu-wiki-${Date.now()}.md`;
-  await fs.writeFile(tempFile, content, "utf-8");
-
-  const cmd = `lark-cli docs +create --title "${title}" --body "${tempFile}"`;
+  const escapedContent = content.replace(/"/g, '\\"').replace(/\n/g, '\\n');
+  const cmd = `lark-cli docs +create --title "${title}" --markdown "${escapedContent}"`;
 
   try {
     execSync(cmd, { stdio: "inherit" });
     console.log(`  创建成功: ${title}`);
   } catch (error) {
     console.error(`  创建失败: ${title}`, error);
-  } finally {
-    await fs.unlink(tempFile).catch(() => {});
   }
 }
 
