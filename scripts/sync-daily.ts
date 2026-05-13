@@ -8,14 +8,8 @@ const today = new Date().toISOString().split("T")[0];
 const SPACE_ID = "7639013663648107490";
 
 async function main() {
-  const phToken = process.env.PH_TOKEN;
+  const phToken = process.env.PH_TOKEN || "";
   const feishuSpaceId = process.env.FEISHU_SPACE_ID || SPACE_ID;
-
-  if (!phToken) {
-    console.error("错误: 缺少 PH_TOKEN 环境变量");
-    console.error("请设置环境变量: export PH_TOKEN=你的ProductHuntToken");
-    process.exit(1);
-  }
 
   console.log("检查 lark-cli 登录状态...");
   try {
@@ -27,13 +21,24 @@ async function main() {
 
   console.log(`开始每日同步: ${today}`);
 
-  console.log("获取 Product Hunt 热门产品...");
-  const popularProducts = await getPopularProducts(phToken, 20);
-  const popularMd = formatPHProducts(popularProducts, "popular");
+  const docs: { title: string; content: string }[] = [];
 
-  console.log("获取 Product Hunt 今日新品...");
-  const newProducts = await getNewProducts(phToken, 20);
-  const newMd = formatPHProducts(newProducts, "new");
+  if (phToken) {
+    console.log("获取 Product Hunt 热门产品...");
+    const popularProducts = await getPopularProducts(phToken, 20);
+    const popularMd = formatPHProducts(popularProducts, "popular");
+
+    console.log("获取 Product Hunt 今日新品...");
+    const newProducts = await getNewProducts(phToken, 20);
+    const newMd = formatPHProducts(newProducts, "new");
+
+    docs.push(
+      { title: `Product Hunt 热门产品 - ${today}`, content: popularMd },
+      { title: `Product Hunt 今日新品 - ${today}`, content: newMd }
+    );
+  } else {
+    console.log("跳过 Product Hunt (未设置 PH_TOKEN)");
+  }
 
   console.log("获取 HackerNews 热门新闻...");
   const topStories = await getTopStories(30);
@@ -43,12 +48,10 @@ async function main() {
   const newStories = await getNewStories(30);
   const newStoriesMd = formatHNStories(newStories, "new");
 
-  const docs = [
-    { title: `Product Hunt 热门产品 - ${today}`, content: popularMd },
-    { title: `Product Hunt 今日新品 - ${today}`, content: newMd },
+  docs.push(
     { title: `HackerNews 热门新闻 - ${today}`, content: topMd },
-    { title: `HackerNews 最新新闻 - ${today}`, content: newStoriesMd },
-  ];
+    { title: `HackerNews 最新新闻 - ${today}`, content: newStoriesMd }
+  );
 
   for (const doc of docs) {
     console.log(`创建文档: ${doc.title}`);
