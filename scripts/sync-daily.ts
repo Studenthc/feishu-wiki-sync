@@ -62,8 +62,7 @@ async function main() {
 }
 
 async function createWikiDoc(spaceId: string, title: string, content: string) {
-  const escapedContent = content.replace(/"/g, '\\"').replace(/\n/g, '\\n');
-  const cmd = `lark-cli docs +create --title "${title}" --markdown "${escapedContent}"`;
+  const cmd = `lark-cli docs +create --title "${title}" --markdown '${content.replace(/'/g, "\\'")}' --wiki-space ${spaceId}`;
 
   try {
     execSync(cmd, { stdio: "inherit" });
