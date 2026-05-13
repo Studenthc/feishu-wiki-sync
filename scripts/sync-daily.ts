@@ -65,7 +65,7 @@ async function createWikiDoc(spaceId: string, title: string, content: string) {
   const tempFile = `/tmp/feishu-wiki-${Date.now()}.md`;
   await fs.writeFile(tempFile, content, "utf-8");
 
-  const cmd = `lark-cli wiki +node-create --space-id "${spaceId}" --title "${title}"`;
+  const cmd = `lark-cli docs +create --title "${title}" --body "${tempFile}"`;
 
   try {
     execSync(cmd, { stdio: "inherit" });
