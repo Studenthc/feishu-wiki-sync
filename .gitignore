@@ -1,0 +1,4 @@
+node_modules/
+temp-wiki-*.md
+.env
+.env.*

@@ -8,7 +8,7 @@ on:
 jobs:
   sync:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 30
     
     steps:
       - name: Checkout repository
@@ -32,7 +32,7 @@ jobs:
         run: pnpm add -g @larksuite/cli
       
       - name: Authenticate with Feishu
-        run: npx feishu-cli auth login --type app
+        run: lark-cli auth login --type app
         env:
           FEISHU_APP_ID: ${{ secrets.FEISHU_APP_ID }}
           FEISHU_APP_SECRET: ${{ secrets.FEISHU_APP_SECRET }}
@@ -40,7 +40,12 @@ jobs:
       - name: Run daily sync
         env:
           PH_TOKEN: ${{ secrets.PH_TOKEN }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_MODEL: ${{ vars.GEMINI_MODEL }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          OPENAI_MODEL: ${{ vars.OPENAI_MODEL }}
+          REQUIRE_CHINESE: "true"
           FEISHU_APP_ID: ${{ secrets.FEISHU_APP_ID }}
           FEISHU_APP_SECRET: ${{ secrets.FEISHU_APP_SECRET }}
           FEISHU_SPACE_ID: ${{ secrets.FEISHU_SPACE_ID }}
-        run: npx tsx scripts/sync-daily.ts
+        run: pnpm sync:daily -- --opportunity
