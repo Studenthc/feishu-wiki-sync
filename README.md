@@ -45,6 +45,8 @@ pnpm sync:daily
 
 GitHub Actions 里默认设置了 `REQUIRE_CHINESE=true`。如果没有配置 `GEMINI_API_KEY` / `OPENAI_API_KEY`，或中文化失败，定时任务会直接失败，避免把英文内容写进知识库。
 
+CI 里使用飞书应用的 bot 身份写入知识库。需要确保飞书应用已经开通文档/知识库写入权限，并且 bot 对目标知识库空间有创建文档权限。
+
 ## Product Hunt Token
 
 Product Hunt API v2 使用 GraphQL endpoint：

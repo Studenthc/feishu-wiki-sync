@@ -33,8 +33,9 @@ async function main() {
 
   const phToken = process.env.PH_TOKEN || "";
   const feishuSpaceId = process.env.FEISHU_SPACE_ID || SPACE_ID;
+  const larkIdentity = process.env.LARK_IDENTITY || "";
 
-  if (!dryRun) {
+  if (!dryRun && larkIdentity !== "bot") {
     console.log("检查 lark-cli 登录状态...");
     try {
       execFileSync("lark-cli", ["auth", "status"], { stdio: "pipe" });
@@ -160,6 +161,7 @@ function usage() {
       "Environment:",
       "  PH_TOKEN          Product Hunt developer token, optional",
       "  FEISHU_SPACE_ID   Feishu wiki space id, optional",
+      "  LARK_IDENTITY     Optional lark-cli identity, use bot in GitHub Actions",
       "  OPENAI_API_KEY    Enables Chinese rewriting for titles and summaries",
       "  OPENAI_MODEL      Optional OpenAI model override",
     ].join("\n")
@@ -243,11 +245,14 @@ async function createWikiDoc(spaceId: string, title: string, content: string) {
   await fs.writeFile(tempFile, content, "utf-8");
 
   try {
+    const identityArgs =
+      process.env.LARK_IDENTITY === "bot" ? ["--as", "bot"] : [];
     execFileSync(
       "lark-cli",
       [
         "docs",
         "+create",
+        ...identityArgs,
         "--title",
         title,
         "--markdown",

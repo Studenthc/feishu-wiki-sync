@@ -31,8 +31,11 @@ jobs:
       - name: Install Feishu CLI
         run: pnpm add -g @larksuite/cli
       
-      - name: Authenticate with Feishu
-        run: lark-cli auth login --type app
+      - name: Configure Feishu CLI
+        run: |
+          printf '%s' "$FEISHU_APP_SECRET" | lark-cli config init --app-id "$FEISHU_APP_ID" --app-secret-stdin --brand feishu
+          lark-cli config default-as bot
+          lark-cli doctor --offline
         env:
           FEISHU_APP_ID: ${{ secrets.FEISHU_APP_ID }}
           FEISHU_APP_SECRET: ${{ secrets.FEISHU_APP_SECRET }}
@@ -45,6 +48,7 @@ jobs:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           OPENAI_MODEL: ${{ vars.OPENAI_MODEL }}
           REQUIRE_CHINESE: "true"
+          LARK_IDENTITY: "bot"
           FEISHU_APP_ID: ${{ secrets.FEISHU_APP_ID }}
           FEISHU_APP_SECRET: ${{ secrets.FEISHU_APP_SECRET }}
           FEISHU_SPACE_ID: ${{ secrets.FEISHU_SPACE_ID }}
