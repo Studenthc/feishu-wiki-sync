@@ -40,10 +40,11 @@ pnpm sync:daily
 
 可选添加仓库变量：
 
-- `GEMINI_MODEL`，默认 `gemini-2.5-flash`
+- `GEMINI_MODEL`，默认 `gemini-2.0-flash-lite`；Gemini 临时高峰不可用时，脚本会自动重试并尝试备用模型
+- `CHINESE_BATCH_SIZE`，默认 `8`；控制每次发给模型的产品/新闻条数，调小更稳，调大更快
 - `OPENAI_MODEL`，默认使用脚本内置模型；需要切换模型时再配置
 
-GitHub Actions 里默认设置了 `REQUIRE_CHINESE=true`。如果没有配置 `GEMINI_API_KEY` / `OPENAI_API_KEY`，或中文化失败，定时任务会直接失败，避免把英文内容写进知识库。
+GitHub Actions 里默认设置了 `REQUIRE_CHINESE=true`。如果没有配置 `GEMINI_API_KEY` / `OPENAI_API_KEY`，或中文化在自动重试和备用模型后仍然失败，定时任务会直接失败，避免把英文内容写进知识库。
 
 CI 里使用飞书应用的 bot 身份写入知识库。需要确保飞书应用已经开通文档/知识库写入权限，并且 bot 对目标知识库空间有创建文档权限。
 
