@@ -32,7 +32,7 @@ async function main() {
   );
 
   const phToken = process.env.PH_TOKEN || "";
-  const feishuSpaceId = process.env.FEISHU_SPACE_ID || SPACE_ID;
+  const feishuSpaceId = getFeishuSpaceId(dryRun);
   const larkIdentity = process.env.LARK_IDENTITY || "";
 
   if (!dryRun && larkIdentity !== "bot") {
@@ -46,6 +46,9 @@ async function main() {
   }
 
   console.log(`开始每日同步: ${syncDate}${dryRun ? " (dry-run)" : ""}`);
+  if (!dryRun) {
+    console.log(`目标飞书知识库 space_id: ${feishuSpaceId}`);
+  }
 
   const docs: { title: string; content: string }[] = [];
   const opportunityProducts: PHProduct[] = [];
@@ -232,6 +235,19 @@ function getUtcDateRange(date: string): { postedAfter: string; postedBefore: str
   };
 }
 
+function getFeishuSpaceId(dryRun: boolean): string {
+  const configuredSpaceId = process.env.FEISHU_SPACE_ID?.trim();
+  if (configuredSpaceId) {
+    return configuredSpaceId;
+  }
+
+  if (!dryRun && process.env.LARK_IDENTITY === "bot") {
+    throw new Error("GitHub Actions 写入飞书时必须配置 FEISHU_SPACE_ID secret");
+  }
+
+  return SPACE_ID;
+}
+
 function previewDoc(title: string, content: string) {
   console.log(`  [dry-run] ${title}`);
   console.log(content.slice(0, 1200));
@@ -265,6 +281,7 @@ async function createWikiDoc(spaceId: string, title: string, content: string) {
     console.log(`  创建成功: ${title}`);
   } catch (error) {
     console.error(`  创建失败: ${title}`, error);
+    throw error;
   } finally {
     await fs.unlink(tempFile).catch(() => {});
   }
