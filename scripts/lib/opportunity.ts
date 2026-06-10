@@ -13,20 +13,36 @@ export interface OpportunityItem {
   title: string;
   source: "Product Hunt" | "HackerNews";
   originalName: string;
+  summary: string;
   demand: string;
   targetUsers: string;
   monetization: string;
   seoKeywords: string[];
   siteIdeas: string[];
+  scoreBreakdown: {
+    realPain: number;
+    searchDemand: number;
+    easyMvp: number;
+    monetizable: number;
+    contentPotential: number;
+  };
   opportunityScore: number;
   scoreReason: string;
+  followUpDecision: "是" | "观察" | "否";
   nextValidationStep: string;
+  shortVideoAngle: string;
   url?: string;
 }
 
 export interface OpportunityRadar {
   date: string;
+  dailyBrief: string;
   topOpportunities: OpportunityItem[];
+  topPicks: {
+    title: string;
+    why: string;
+    actionToday: string;
+  }[];
   keywordClusters: {
     cluster: string;
     keywords: string[];
@@ -60,19 +76,27 @@ export async function buildOpportunityRadar(
         "输出必须是中文 JSON，不能包含 Markdown。",
         "判断标准：真实痛点、可搜索需求、可在一周内做 MVP、可通过 SEO/工具站/affiliate/SaaS 变现。",
         "不要只摘要新闻，要输出需求洞察和可执行站点选题。",
+        "输出要服务两个目的：1) 判断是否值得建站赚钱；2) 生成短视频/图文选题。",
+        "每个机会都必须用 1 句 summary 说明它是什么。",
         "opportunityScore 必须是 1 到 5 的整数，5 代表最值得本周验证。",
+        "scoreBreakdown 是 5 个 0/1 分项：realPain, searchDemand, easyMvp, monetizable, contentPotential。",
+        "opportunityScore 必须等于 scoreBreakdown 五项之和；如果总分为 0，opportunityScore 输出 1。",
+        "followUpDecision 只能是 是、观察、否。4-5 分一般是 是，3 分一般是 观察，1-2 分一般是 否。",
         "seoKeywords 每项 3 到 6 个关键词。",
         "siteIdeas 每项 2 到 4 个具体页面或工具站想法。",
+        "shortVideoAngle 用 1 句中文说明 30-60 秒短视频应该怎么讲，不能模仿任何具体博主口吻。",
+        "topPicks 输出 1 到 3 个今日最推荐机会，必须来自 topOpportunities。",
         "weeklyExperiments 给 3 个本周可做的验证实验。",
-        "必须使用英文 JSON 键名：date, topOpportunities, keywordClusters, avoidList, weeklyExperiments。",
-        "topOpportunities 每一项必须包含这些英文键名：title, source, originalName, demand, targetUsers, monetization, seoKeywords, siteIdeas, opportunityScore, scoreReason, nextValidationStep, url。",
+        "必须使用英文 JSON 键名：date, dailyBrief, topPicks, topOpportunities, keywordClusters, avoidList, weeklyExperiments。",
+        "topPicks 每一项必须包含这些英文键名：title, why, actionToday。",
+        "topOpportunities 每一项必须包含这些英文键名：title, source, originalName, summary, demand, targetUsers, monetization, seoKeywords, siteIdeas, scoreBreakdown, opportunityScore, scoreReason, followUpDecision, nextValidationStep, shortVideoAngle, url。",
         "keywordClusters 每一项必须包含这些英文键名：cluster, keywords, why。",
         "avoidList 每一项必须包含这些英文键名：name, reason。",
         "weeklyExperiments 每一项必须包含这些英文键名：idea, landingPageAngle, validationStep。",
         "只要输入 products 或 stories 非空，topOpportunities 至少输出 5 项，keywordClusters 至少输出 3 项，avoidList 至少输出 2 项，weeklyExperiments 至少输出 3 项。",
         "不要因为信息不完整而输出空数组；可以基于产品描述、评论数和标题做合理商业假设，并在验证动作里要求人工验证。",
         "严格按这个 JSON 形状输出：",
-        '{"date":"YYYY-MM-DD","topOpportunities":[{"title":"中文机会标题","source":"Product Hunt","originalName":"原产品或新闻名","demand":"中文需求判断","targetUsers":"中文目标用户","monetization":"中文变现方式","seoKeywords":["中文关键词"],"siteIdeas":["中文页面或工具想法"],"opportunityScore":4,"scoreReason":"中文评分理由","nextValidationStep":"中文验证动作","url":"https://example.com"}],"keywordClusters":[{"cluster":"中文集群名","keywords":["中文关键词"],"why":"中文理由"}],"avoidList":[{"name":"中文名称","reason":"中文理由"}],"weeklyExperiments":[{"idea":"中文实验","landingPageAngle":"中文落地页角度","validationStep":"中文验证动作"}]}',
+        '{"date":"YYYY-MM-DD","dailyBrief":"中文今日总览","topPicks":[{"title":"中文机会标题","why":"中文推荐理由","actionToday":"中文今日动作"}],"topOpportunities":[{"title":"中文机会标题","source":"Product Hunt","originalName":"原产品或新闻名","summary":"中文一句话简介","demand":"中文需求判断","targetUsers":"中文目标用户","monetization":"中文变现方式","seoKeywords":["中文关键词"],"siteIdeas":["中文页面或工具想法"],"scoreBreakdown":{"realPain":1,"searchDemand":1,"easyMvp":1,"monetizable":1,"contentPotential":0},"opportunityScore":4,"scoreReason":"中文评分理由","followUpDecision":"是","nextValidationStep":"中文验证动作","shortVideoAngle":"中文短视频讲法","url":"https://example.com"}],"keywordClusters":[{"cluster":"中文集群名","keywords":["中文关键词"],"why":"中文理由"}],"avoidList":[{"name":"中文名称","reason":"中文理由"}],"weeklyExperiments":[{"idea":"中文实验","landingPageAngle":"中文落地页角度","validationStep":"中文验证动作"}]}',
       ].join("\n"),
       {
         date: input.date,
@@ -131,6 +155,10 @@ function ensureUsefulRadar(
     return {
       ...radar,
       date: radar.date || input.date,
+      dailyBrief: isUsefulText(radar.dailyBrief)
+        ? radar.dailyBrief
+        : "今天的机会雷达已生成，请优先查看高分机会和本周验证动作。",
+      topPicks: Array.isArray(radar.topPicks) ? radar.topPicks : [],
       topOpportunities: Array.isArray(radar.topOpportunities)
         ? radar.topOpportunities
         : [],
@@ -153,6 +181,7 @@ function isUsefulOpportunityItem(item: OpportunityItem): boolean {
     isUsefulText(item.title) &&
     (item.source === "Product Hunt" || item.source === "HackerNews") &&
     isUsefulText(item.originalName) &&
+    isUsefulText(item.summary) &&
     isUsefulText(item.demand) &&
     isUsefulText(item.targetUsers) &&
     isUsefulText(item.monetization) &&
@@ -162,12 +191,44 @@ function isUsefulOpportunityItem(item: OpportunityItem): boolean {
     Array.isArray(item.siteIdeas) &&
     item.siteIdeas.length > 0 &&
     item.siteIdeas.every(isUsefulText) &&
+    isValidScoreBreakdown(item.scoreBreakdown) &&
     Number.isInteger(item.opportunityScore) &&
     item.opportunityScore >= 1 &&
     item.opportunityScore <= 5 &&
+    item.opportunityScore === getScoreFromBreakdown(item.scoreBreakdown) &&
     isUsefulText(item.scoreReason) &&
-    isUsefulText(item.nextValidationStep)
+    ["是", "观察", "否"].includes(item.followUpDecision) &&
+    isUsefulText(item.nextValidationStep) &&
+    isUsefulText(item.shortVideoAngle)
   );
+}
+
+function isValidScoreBreakdown(value: unknown): value is OpportunityItem["scoreBreakdown"] {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+
+  const breakdown = value as Record<string, unknown>;
+  return [
+    breakdown.realPain,
+    breakdown.searchDemand,
+    breakdown.easyMvp,
+    breakdown.monetizable,
+    breakdown.contentPotential,
+  ].every((score) => score === 0 || score === 1);
+}
+
+function getScoreFromBreakdown(
+  breakdown: OpportunityItem["scoreBreakdown"]
+): number {
+  const score =
+    breakdown.realPain +
+    breakdown.searchDemand +
+    breakdown.easyMvp +
+    breakdown.monetizable +
+    breakdown.contentPotential;
+
+  return Math.max(1, score);
 }
 
 function isUsefulText(value: unknown): value is string {
@@ -176,20 +237,39 @@ function isUsefulText(value: unknown): value is string {
 
 export function formatOpportunityRadar(radar: OpportunityRadar): string {
   let md = `# 每日机会雷达 - ${radar.date}\n\n`;
-  md += `> 面向上站赚钱：从 Product Hunt / HackerNews 中提取需求、关键词、变现方式和本周验证动作。\n\n`;
+  md += `> 面向上站赚钱：从 Product Hunt / HackerNews 中提取需求、关键词、变现方式、验证动作和自媒体选题角度。\n\n`;
+  md += `**今日判断**: ${radar.dailyBrief}\n\n`;
+  md += `---\n\n`;
+
+  md += `## 今日最值得跟进\n\n`;
+  if (radar.topPicks.length === 0) {
+    md += `今天没有明显高分机会，建议只观察关键词和讨论方向。\n\n`;
+  } else {
+    radar.topPicks.forEach((pick, index) => {
+      md += `${index + 1}. **${pick.title}**\n`;
+      md += `   - 推荐理由: ${pick.why}\n`;
+      md += `   - 今日动作: ${pick.actionToday}\n`;
+    });
+    md += `\n`;
+  }
+
   md += `---\n\n`;
 
   md += `## 最值得研究的机会\n\n`;
   radar.topOpportunities.forEach((item, index) => {
     md += `### ${index + 1}. ${item.title}\n\n`;
     md += `- **来源**: ${item.source} / ${item.originalName}\n`;
+    md += `- **一句话简介**: ${item.summary}\n`;
     md += `- **需求判断**: ${item.demand}\n`;
     md += `- **目标用户**: ${item.targetUsers}\n`;
-    md += `- **变现方式**: ${item.monetization}\n`;
+    md += `- **建站机会**: ${item.siteIdeas.join("；")}\n`;
     md += `- **SEO 关键词**: ${item.seoKeywords.join("、")}\n`;
-    md += `- **可做选题**: ${item.siteIdeas.join("；")}\n`;
+    md += `- **变现方式**: ${item.monetization}\n`;
+    md += `- **评分拆解**: 真实痛点 ${item.scoreBreakdown.realPain}/1，搜索需求 ${item.scoreBreakdown.searchDemand}/1，MVP 难度 ${item.scoreBreakdown.easyMvp}/1，可变现 ${item.scoreBreakdown.monetizable}/1，内容传播 ${item.scoreBreakdown.contentPotential}/1\n`;
     md += `- **机会评分**: ${item.opportunityScore}/5，${item.scoreReason}\n`;
+    md += `- **是否值得跟进**: ${item.followUpDecision}\n`;
     md += `- **本周验证**: ${item.nextValidationStep}\n`;
+    md += `- **短视频脚本角度**: ${item.shortVideoAngle}\n`;
     if (item.url) {
       md += `- **链接**: ${item.url}\n`;
     }
@@ -223,6 +303,12 @@ function buildFallbackRadar(input: OpportunityInput): OpportunityRadar {
     title: `${product.name} 相关需求`,
     source: "Product Hunt" as const,
     originalName: product.name,
+    summary:
+      product.summaryZh ||
+      product.descriptionZh ||
+      product.description ||
+      product.taglineZh ||
+      product.tagline,
     demand:
       product.descriptionZh ||
       product.description ||
@@ -240,9 +326,19 @@ function buildFallbackRadar(input: OpportunityInput): OpportunityRadar {
       `${product.name} 替代品列表`,
       `${product.name} 使用场景工具页`,
     ],
-    opportunityScore: Math.min(5, Math.max(1, Math.ceil((product.commentsCount || 1) / 30))),
+    scoreBreakdown: buildFallbackScoreBreakdown(
+      Math.min(5, Math.max(1, Math.ceil((product.commentsCount || 1) / 30)))
+    ),
+    opportunityScore: Math.min(
+      5,
+      Math.max(1, Math.ceil((product.commentsCount || 1) / 30))
+    ),
     scoreReason: "基于 Product Hunt 评论量做初步热度估计，需要再查搜索需求。",
+    followUpDecision: getFollowUpDecision(
+      Math.min(5, Math.max(1, Math.ceil((product.commentsCount || 1) / 30)))
+    ),
     nextValidationStep: "搜索相关关键词，记录竞品页面、广告投放和用户抱怨。",
+    shortVideoAngle: `用 30 秒讲清楚 ${product.name} 背后的具体痛点，再给出一个可做成网站的替代方案。`,
     url: product.url,
   }));
 
@@ -250,6 +346,10 @@ function buildFallbackRadar(input: OpportunityInput): OpportunityRadar {
     title: story.titleZh || story.title,
     source: "HackerNews" as const,
     originalName: story.title,
+    summary:
+      story.summaryZh ||
+      story.summary ||
+      `围绕 ${story.title} 的讨论可能代表一个内容或工具需求。`,
     demand:
       story.summaryZh ||
       story.summary ||
@@ -266,15 +366,39 @@ function buildFallbackRadar(input: OpportunityInput): OpportunityRadar {
       "相关工具清单",
       "问题解决指南",
     ],
-    opportunityScore: Math.min(5, Math.max(1, Math.ceil((story.descendants || 1) / 80))),
+    scoreBreakdown: buildFallbackScoreBreakdown(
+      Math.min(5, Math.max(1, Math.ceil((story.descendants || 1) / 80)))
+    ),
+    opportunityScore: Math.min(
+      5,
+      Math.max(1, Math.ceil((story.descendants || 1) / 80))
+    ),
     scoreReason: "基于 HackerNews 评论量做初步热度估计，需要验证是否有商业搜索意图。",
+    followUpDecision: getFollowUpDecision(
+      Math.min(5, Math.max(1, Math.ceil((story.descendants || 1) / 80)))
+    ),
     nextValidationStep: "查看评论区痛点，提取反复出现的问题和付费场景。",
+    shortVideoAngle: `用这条 HN 讨论切入，讲清楚开发者为什么关心它，以及能不能拆成一个轻量工具站。`,
     url: story.url,
   }));
 
+  const topOpportunities = [...productItems, ...storyItems].slice(0, input.maxItems);
+
   return {
     date: input.date,
-    topOpportunities: [...productItems, ...storyItems].slice(0, input.maxItems),
+    dailyBrief:
+      topOpportunities.length > 0
+        ? "今天的内容适合先从高评论产品和高讨论新闻里找长尾工具站机会，优先验证搜索需求和付费场景。"
+        : "今天没有抓到可分析内容。",
+    topPicks: topOpportunities
+      .filter((item) => item.opportunityScore >= 4)
+      .slice(0, 3)
+      .map((item) => ({
+        title: item.title,
+        why: item.scoreReason,
+        actionToday: item.nextValidationStep,
+      })),
+    topOpportunities,
     keywordClusters: [
       {
         cluster: "AI 工具与自动化",
@@ -320,4 +444,28 @@ function buildFallbackRadar(input: OpportunityInput): OpportunityRadar {
       },
     ],
   };
+}
+
+function buildFallbackScoreBreakdown(
+  score: number
+): OpportunityItem["scoreBreakdown"] {
+  return {
+    realPain: score >= 1 ? 1 : 0,
+    searchDemand: score >= 2 ? 1 : 0,
+    easyMvp: score >= 3 ? 1 : 0,
+    monetizable: score >= 4 ? 1 : 0,
+    contentPotential: score >= 5 ? 1 : 0,
+  };
+}
+
+function getFollowUpDecision(score: number): OpportunityItem["followUpDecision"] {
+  if (score >= 4) {
+    return "是";
+  }
+
+  if (score === 3) {
+    return "观察";
+  }
+
+  return "否";
 }
