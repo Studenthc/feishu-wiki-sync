@@ -1,5 +1,19 @@
 import assert from "node:assert/strict";
+import { getChineseProvider } from "./chinese";
 import { formatOpportunityRadar, type OpportunityRadar } from "./opportunity";
+
+const originalGrsAIKey = process.env.GRSAI_API_KEY;
+const originalGeminiKey = process.env.GEMINI_API_KEY;
+const originalOpenAIKey = process.env.OPENAI_API_KEY;
+
+process.env.GRSAI_API_KEY = "test-grsai-key";
+process.env.GEMINI_API_KEY = "test-gemini-key";
+process.env.OPENAI_API_KEY = "test-openai-key";
+assert.equal(getChineseProvider()?.name, "grsai");
+
+restoreEnv("GRSAI_API_KEY", originalGrsAIKey);
+restoreEnv("GEMINI_API_KEY", originalGeminiKey);
+restoreEnv("OPENAI_API_KEY", originalOpenAIKey);
 
 const radar: OpportunityRadar = {
   date: "2026-05-22",
@@ -74,3 +88,12 @@ assert.match(markdown, /是否值得跟进\*\*: 是/);
 assert.match(markdown, /短视频脚本角度/);
 
 console.log("opportunity formatter test passed");
+
+function restoreEnv(name: string, value: string | undefined) {
+  if (value === undefined) {
+    delete process.env[name];
+    return;
+  }
+
+  process.env[name] = value;
+}

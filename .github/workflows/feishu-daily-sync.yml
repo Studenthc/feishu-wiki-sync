@@ -43,6 +43,11 @@ jobs:
       - name: Run daily sync
         env:
           PH_TOKEN: ${{ secrets.PH_TOKEN }}
+          GRSAI_API_KEY: ${{ secrets.GRSAI_API_KEY }}
+          GRSAI_MODEL: ${{ vars.GRSAI_MODEL }}
+          GRSAI_API_URL: ${{ vars.GRSAI_API_URL }}
+          GRSAI_MAX_TOKENS: ${{ vars.GRSAI_MAX_TOKENS }}
+          GRSAI_TIMEOUT_MS: ${{ vars.GRSAI_TIMEOUT_MS }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           GEMINI_MODEL: ${{ vars.GEMINI_MODEL }}
           CHINESE_BATCH_SIZE: ${{ vars.CHINESE_BATCH_SIZE }}
