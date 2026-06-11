@@ -4,9 +4,12 @@ import type { PHProduct } from "./product-hunt";
 const OPENAI_RESPONSES_URL = "https://api.openai.com/v1/responses";
 const GEMINI_API_BASE = "https://generativelanguage.googleapis.com/v1beta/models";
 const GRSAI_CHAT_COMPLETIONS_URL = "https://api.grsai.com/v1/chat/completions";
+const APIMART_CHAT_COMPLETIONS_URL =
+  "https://api.apimart.ai/api/v1/chat/completions";
 const DEFAULT_OPENAI_MODEL = "gpt-4o-mini";
 const DEFAULT_GEMINI_MODEL = "gemini-2.0-flash-lite";
 const DEFAULT_GRSAI_MODEL = "gemini-2.5-flash";
+const DEFAULT_APIMART_MODEL = "deepseek-v4-flash";
 const GRSAI_FALLBACK_MODELS = [
   DEFAULT_GRSAI_MODEL,
   "gemini-2.5-flash-lite",
@@ -37,7 +40,7 @@ interface LocalizedStory {
 }
 
 export interface ChineseJsonProvider {
-  name: "grsai" | "gemini" | "openai";
+  name: "apimart" | "grsai" | "gemini" | "openai";
   createJson: <T>(instructions: string, payload: unknown) => Promise<T>;
 }
 
@@ -47,7 +50,7 @@ export async function localizeProducts(products: PHProduct[]): Promise<PHProduct
     if (!provider) {
       assertChineseAvailable();
       console.log(
-        "跳过中文化 (未设置 GRSAI_API_KEY、GEMINI_API_KEY 或 OPENAI_API_KEY)"
+        "跳过中文化 (未设置 APIMART_TEXT_API_KEY、APIMART_API_KEY、GRSAI_API_KEY、GEMINI_API_KEY 或 OPENAI_API_KEY)"
       );
     }
     return products;
@@ -96,7 +99,7 @@ export async function localizeStories(stories: HNStory[]): Promise<HNStory[]> {
     if (!provider) {
       assertChineseAvailable();
       console.log(
-        "跳过中文化 (未设置 GRSAI_API_KEY、GEMINI_API_KEY 或 OPENAI_API_KEY)"
+        "跳过中文化 (未设置 APIMART_TEXT_API_KEY、APIMART_API_KEY、GRSAI_API_KEY、GEMINI_API_KEY 或 OPENAI_API_KEY)"
       );
     }
     return stories;
@@ -140,26 +143,36 @@ export async function localizeStories(stories: HNStory[]): Promise<HNStory[]> {
 }
 
 export function getChineseProvider(): ChineseJsonProvider | null {
+  const apimartKey =
+    process.env.APIMART_TEXT_API_KEY || process.env.APIMART_API_KEY || "";
   const grsaiKey = process.env.GRSAI_API_KEY || "";
   const geminiKey = process.env.GEMINI_API_KEY || "";
   const openaiKey = process.env.OPENAI_API_KEY || "";
 
+  if (apimartKey) {
+    const fallbackProviders = getFallbackProviders({
+      grsaiKey,
+      geminiKey,
+      openaiKey,
+    });
+
+    return {
+      name: "apimart",
+      createJson: async (instructions, payload) => {
+        try {
+          return await withRetry(
+            () => createAPIMartChineseJson(apimartKey, instructions, payload),
+            `APIMart ${process.env.APIMART_TEXT_MODEL || DEFAULT_APIMART_MODEL}`
+          );
+        } catch (error) {
+          return fallbackToProviders(error, fallbackProviders, instructions, payload);
+        }
+      },
+    };
+  }
+
   if (grsaiKey) {
-    const fallbackProviders: ChineseJsonProvider[] = [];
-    if (geminiKey) {
-      fallbackProviders.push({
-        name: "gemini",
-        createJson: <T>(instructions: string, payload: unknown) =>
-          createGeminiChineseJson<T>(geminiKey, instructions, payload),
-      });
-    }
-    if (openaiKey) {
-      fallbackProviders.push({
-        name: "openai",
-        createJson: <T>(instructions: string, payload: unknown) =>
-          createOpenAIChineseJson<T>(openaiKey, instructions, payload),
-      });
-    }
+    const fallbackProviders = getFallbackProviders({ geminiKey, openaiKey });
 
     return {
       name: "grsai",
@@ -167,24 +180,7 @@ export function getChineseProvider(): ChineseJsonProvider | null {
         try {
           return await createGrsAIChineseJson(grsaiKey, instructions, payload);
         } catch (error) {
-          if (fallbackProviders.length === 0) {
-            throw error;
-          }
-
-          console.warn("GrsAI 中文化失败，尝试其他 provider。");
-          let lastError: unknown = error;
-          for (const provider of fallbackProviders) {
-            try {
-              return await provider.createJson(instructions, payload);
-            } catch (fallbackError) {
-              lastError = fallbackError;
-              console.warn(`${provider.name} 中文化失败，继续尝试其他 provider。`);
-            }
-          }
-
-          throw lastError instanceof Error
-            ? lastError
-            : new Error("All Chinese providers failed");
+          return fallbackToProviders(error, fallbackProviders, instructions, payload);
         }
       },
     };
@@ -209,6 +205,67 @@ export function getChineseProvider(): ChineseJsonProvider | null {
   return null;
 }
 
+function getFallbackProviders({
+  grsaiKey = "",
+  geminiKey = "",
+  openaiKey = "",
+}: {
+  grsaiKey?: string;
+  geminiKey?: string;
+  openaiKey?: string;
+}): ChineseJsonProvider[] {
+  const providers: ChineseJsonProvider[] = [];
+  if (grsaiKey) {
+    providers.push({
+      name: "grsai",
+      createJson: <T>(instructions: string, payload: unknown) =>
+        createGrsAIChineseJson<T>(grsaiKey, instructions, payload),
+    });
+  }
+  if (geminiKey) {
+    providers.push({
+      name: "gemini",
+      createJson: <T>(instructions: string, payload: unknown) =>
+        createGeminiChineseJson<T>(geminiKey, instructions, payload),
+    });
+  }
+  if (openaiKey) {
+    providers.push({
+      name: "openai",
+      createJson: <T>(instructions: string, payload: unknown) =>
+        createOpenAIChineseJson<T>(openaiKey, instructions, payload),
+    });
+  }
+
+  return providers;
+}
+
+async function fallbackToProviders<T>(
+  originalError: unknown,
+  providers: ChineseJsonProvider[],
+  instructions: string,
+  payload: unknown
+): Promise<T> {
+  if (providers.length === 0) {
+    throw originalError;
+  }
+
+  console.warn("当前中文化 provider 失败，尝试其他 provider。");
+  let lastError: unknown = originalError;
+  for (const provider of providers) {
+    try {
+      return await provider.createJson<T>(instructions, payload);
+    } catch (fallbackError) {
+      lastError = fallbackError;
+      console.warn(`${provider.name} 中文化失败，继续尝试其他 provider。`);
+    }
+  }
+
+  throw lastError instanceof Error
+    ? lastError
+    : new Error("All Chinese providers failed");
+}
+
 export function assertChineseAvailable(cause?: unknown): void {
   if (process.env.REQUIRE_CHINESE === "true") {
     throw new Error(
@@ -217,6 +274,75 @@ export function assertChineseAvailable(cause?: unknown): void {
       }`
     );
   }
+}
+
+async function createAPIMartChineseJson<T>(
+  apiKey: string,
+  instructions: string,
+  payload: unknown
+): Promise<T> {
+  const timeoutMs =
+    Number.parseInt(process.env.APIMART_TEXT_TIMEOUT_MS || "", 10) || 30_000;
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+  let response: Response;
+  try {
+    response = await fetch(process.env.APIMART_TEXT_API_URL || APIMART_CHAT_COMPLETIONS_URL, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: process.env.APIMART_TEXT_MODEL || DEFAULT_APIMART_MODEL,
+        stream: false,
+        messages: [
+          {
+            role: "system",
+            content: instructions,
+          },
+          {
+            role: "user",
+            content: JSON.stringify(payload),
+          },
+        ],
+        max_tokens:
+          Number.parseInt(process.env.APIMART_TEXT_MAX_TOKENS || "", 10) || 6000,
+        temperature: 0.2,
+      }),
+      signal: controller.signal,
+    });
+  } finally {
+    clearTimeout(timeoutId);
+  }
+
+  const raw = await response.text();
+  let data: any;
+  try {
+    data = raw ? JSON.parse(raw) : null;
+  } catch {
+    throw new ApiError(
+      `APIMart API returned invalid JSON: ${raw.slice(0, 200)}`,
+      response.status
+    );
+  }
+
+  if (!response.ok) {
+    throw new ApiError(
+      `APIMart API error: ${response.status} ${JSON.stringify(
+        data?.error || data
+      )}`,
+      response.status
+    );
+  }
+
+  const text = extractChatCompletionOutputText(data);
+  if (!text) {
+    throw new Error("APIMart response missing output text");
+  }
+
+  return JSON.parse(stripJsonFence(text)) as T;
 }
 
 async function createGrsAIChineseJson<T>(
@@ -428,8 +554,8 @@ function extractOpenAIOutputText(data: any): string {
   return chunks.join("\n").trim();
 }
 
-function extractGrsAIOutputText(data: any): string {
-  const content = data.choices?.[0]?.message?.content;
+function extractChatCompletionOutputText(data: any): string {
+  const content = data?.choices?.[0]?.message?.content;
   if (typeof content === "string") {
     return content.trim();
   }
@@ -447,6 +573,10 @@ function extractGrsAIOutputText(data: any): string {
   }
 
   return "";
+}
+
+function extractGrsAIOutputText(data: any): string {
+  return extractChatCompletionOutputText(data);
 }
 
 function extractGeminiText(data: any): string {

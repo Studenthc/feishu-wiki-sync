@@ -5,12 +5,21 @@ import { formatOpportunityRadar, type OpportunityRadar } from "./opportunity";
 const originalGrsAIKey = process.env.GRSAI_API_KEY;
 const originalGeminiKey = process.env.GEMINI_API_KEY;
 const originalOpenAIKey = process.env.OPENAI_API_KEY;
+const originalAPIMartTextKey = process.env.APIMART_TEXT_API_KEY;
+const originalAPIMartKey = process.env.APIMART_API_KEY;
 
+process.env.APIMART_TEXT_API_KEY = "test-apimart-key";
 process.env.GRSAI_API_KEY = "test-grsai-key";
 process.env.GEMINI_API_KEY = "test-gemini-key";
 process.env.OPENAI_API_KEY = "test-openai-key";
+assert.equal(getChineseProvider()?.name, "apimart");
+
+delete process.env.APIMART_TEXT_API_KEY;
+delete process.env.APIMART_API_KEY;
 assert.equal(getChineseProvider()?.name, "grsai");
 
+restoreEnv("APIMART_TEXT_API_KEY", originalAPIMartTextKey);
+restoreEnv("APIMART_API_KEY", originalAPIMartKey);
 restoreEnv("GRSAI_API_KEY", originalGrsAIKey);
 restoreEnv("GEMINI_API_KEY", originalGeminiKey);
 restoreEnv("OPENAI_API_KEY", originalOpenAIKey);

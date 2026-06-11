@@ -15,6 +15,7 @@ pnpm sync:daily -- --dry-run
 
 ```bash
 PH_TOKEN=你的_access_token
+APIMART_TEXT_API_KEY=你的_apimart_key
 GRSAI_API_KEY=你的_grsai_key
 GEMINI_API_KEY=你的_gemini_key
 ```
@@ -36,12 +37,18 @@ pnpm sync:daily
 - `FEISHU_APP_SECRET`
 - `FEISHU_SPACE_ID`
 - `PH_TOKEN`，可选；不配置时会跳过 Product Hunt，只同步 HackerNews
+- `APIMART_TEXT_API_KEY`，推荐；配置后优先使用 APIMart 的 `deepseek-v4-flash` 做中文总结和机会分析
+- `APIMART_API_KEY`，可选；没有 `APIMART_TEXT_API_KEY` 时作为 APIMart 文本备用 key
 - `GRSAI_API_KEY`，推荐；配置后优先使用 GrsAI 的 OpenAI 兼容接口调用 Gemini Flash 做中文总结和机会分析
 - `GEMINI_API_KEY`，推荐；配置后会把产品/新闻的标题、简介、描述改写成中文
 - `OPENAI_API_KEY`，可选；没有 Gemini key 时作为中文化备用 provider
 
 可选添加仓库变量：
 
+- `APIMART_TEXT_MODEL`，默认 `deepseek-v4-flash`
+- `APIMART_TEXT_API_URL`，默认 `https://api.apimart.ai/api/v1/chat/completions`
+- `APIMART_TEXT_MAX_TOKENS`，默认 `6000`
+- `APIMART_TEXT_TIMEOUT_MS`，默认 `30000`
 - `GRSAI_MODEL`，默认 `gemini-2.5-flash`
 - `GRSAI_API_URL`，默认 `https://api.grsai.com/v1/chat/completions`
 - `GRSAI_MAX_TOKENS`，默认 `6000`
@@ -50,7 +57,7 @@ pnpm sync:daily
 - `CHINESE_BATCH_SIZE`，默认 `30`；控制每次发给模型的产品/新闻条数，调小更稳，调大更快
 - `OPENAI_MODEL`，默认使用脚本内置模型；需要切换模型时再配置
 
-GitHub Actions 里默认设置了 `REQUIRE_CHINESE=true`。如果没有配置 `GRSAI_API_KEY` / `GEMINI_API_KEY` / `OPENAI_API_KEY`，或中文化在自动重试和备用模型后仍然失败，定时任务会直接失败，避免把英文内容写进知识库。
+GitHub Actions 里默认设置了 `REQUIRE_CHINESE=true`。如果没有配置 `APIMART_TEXT_API_KEY` / `APIMART_API_KEY` / `GRSAI_API_KEY` / `GEMINI_API_KEY` / `OPENAI_API_KEY`，或中文化在自动重试和备用模型后仍然失败，定时任务会直接失败，避免把英文内容写进知识库。
 
 CI 里使用飞书应用的 bot 身份写入知识库。需要确保飞书应用已经开通文档/知识库写入权限，并且 bot 对目标知识库空间有创建文档权限。
 

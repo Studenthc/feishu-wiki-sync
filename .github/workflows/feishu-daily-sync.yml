@@ -43,6 +43,12 @@ jobs:
       - name: Run daily sync
         env:
           PH_TOKEN: ${{ secrets.PH_TOKEN }}
+          APIMART_TEXT_API_KEY: ${{ secrets.APIMART_TEXT_API_KEY }}
+          APIMART_API_KEY: ${{ secrets.APIMART_API_KEY }}
+          APIMART_TEXT_MODEL: ${{ vars.APIMART_TEXT_MODEL }}
+          APIMART_TEXT_API_URL: ${{ vars.APIMART_TEXT_API_URL }}
+          APIMART_TEXT_MAX_TOKENS: ${{ vars.APIMART_TEXT_MAX_TOKENS }}
+          APIMART_TEXT_TIMEOUT_MS: ${{ vars.APIMART_TEXT_TIMEOUT_MS }}
           GRSAI_API_KEY: ${{ secrets.GRSAI_API_KEY }}
           GRSAI_MODEL: ${{ vars.GRSAI_MODEL }}
           GRSAI_API_URL: ${{ vars.GRSAI_API_URL }}
