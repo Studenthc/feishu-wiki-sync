@@ -48,7 +48,7 @@ pnpm sync:daily
 - `APIMART_TEXT_MODEL`，默认 `deepseek-v4-flash`
 - `APIMART_TEXT_API_URL`，默认 `https://api.apimart.ai/api/v1/chat/completions`
 - `APIMART_TEXT_MAX_TOKENS`，默认 `6000`
-- `APIMART_TEXT_TIMEOUT_MS`，默认 `30000`
+- `APIMART_TEXT_TIMEOUT_MS`，默认 `120000`
 - `GRSAI_MODEL`，默认 `gemini-2.5-flash`
 - `GRSAI_API_URL`，默认 `https://api.grsai.com/v1/chat/completions`
 - `GRSAI_MAX_TOKENS`，默认 `6000`

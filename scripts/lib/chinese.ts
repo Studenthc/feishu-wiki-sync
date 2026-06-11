@@ -282,7 +282,7 @@ async function createAPIMartChineseJson<T>(
   payload: unknown
 ): Promise<T> {
   const timeoutMs =
-    Number.parseInt(process.env.APIMART_TEXT_TIMEOUT_MS || "", 10) || 30_000;
+    Number.parseInt(process.env.APIMART_TEXT_TIMEOUT_MS || "", 10) || 120_000;
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
