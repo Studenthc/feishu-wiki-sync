@@ -18,7 +18,7 @@ const GEMINI_FALLBACK_MODELS = [
   "gemini-2.0-flash",
   "gemini-2.5-flash",
 ];
-const DEFAULT_BATCH_SIZE = 8;
+const DEFAULT_BATCH_SIZE = 30;
 const RETRY_DELAYS_MS = [2_000, 8_000, 20_000];
 const RETRYABLE_STATUS_CODES = new Set([429, 500, 502, 503, 504]);
 const unavailableGeminiModels = new Set<string>();

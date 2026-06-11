@@ -47,7 +47,7 @@ pnpm sync:daily
 - `GRSAI_MAX_TOKENS`，默认 `6000`
 - `GRSAI_TIMEOUT_MS`，默认 `30000`
 - `GEMINI_MODEL`，默认 `gemini-2.0-flash-lite`；Gemini 临时高峰不可用时，脚本会自动重试并尝试备用模型
-- `CHINESE_BATCH_SIZE`，默认 `8`；控制每次发给模型的产品/新闻条数，调小更稳，调大更快
+- `CHINESE_BATCH_SIZE`，默认 `30`；控制每次发给模型的产品/新闻条数，调小更稳，调大更快
 - `OPENAI_MODEL`，默认使用脚本内置模型；需要切换模型时再配置
 
 GitHub Actions 里默认设置了 `REQUIRE_CHINESE=true`。如果没有配置 `GRSAI_API_KEY` / `GEMINI_API_KEY` / `OPENAI_API_KEY`，或中文化在自动重试和备用模型后仍然失败，定时任务会直接失败，避免把英文内容写进知识库。
