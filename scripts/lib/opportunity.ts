@@ -20,16 +20,21 @@ export interface OpportunityItem {
   seoKeywords: string[];
   siteIdeas: string[];
   scoreBreakdown: {
-    realPain: number;
-    searchDemand: number;
-    easyMvp: number;
-    monetizable: number;
-    contentPotential: number;
+    painEvidence: number;
+    searchIntent: number;
+    monetizationProof: number;
+    mvpFit: number;
+    contentFit: number;
   };
   opportunityScore: number;
   scoreReason: string;
-  followUpDecision: "是" | "观察" | "否";
+  evidenceLevel: "强证据" | "中证据" | "弱证据";
+  followUpDecision: "验证" | "观察" | "放弃";
   nextValidationStep: string;
+  actionToday: string[];
+  missingEvidence: string[];
+  contentAngle: string;
+  buildAngle: string;
   shortVideoAngle: string;
   url?: string;
 }
@@ -71,32 +76,36 @@ export async function buildOpportunityRadar(
   try {
     return await provider.createJson<OpportunityRadar>(
       [
-        "你是一个面向独立开发者和内容站站长的需求挖掘分析师。",
-        "请从 Product Hunt 和 HackerNews 数据中找适合上站赚钱的机会。",
+        "你是一个面向独立开发者、内容站站长和短视频创作者的需求验证分析师。",
+        "请从 Product Hunt 和 HackerNews 数据中找可验证的机会，不要把热点直接包装成确定能赚钱的项目。",
         "输出必须是中文 JSON，不能包含 Markdown。",
-        "判断标准：真实痛点、可搜索需求、可在一周内做 MVP、可通过 SEO/工具站/affiliate/SaaS 变现。",
-        "不要只摘要新闻，要输出需求洞察和可执行站点选题。",
-        "输出要服务两个目的：1) 判断是否值得建站赚钱；2) 生成短视频/图文选题。",
+        "核心原则：PH/HN 热度只是线索，不是需求证明。没有搜索量、竞品变现、用户抱怨或付费场景时，必须标为弱证据或观察。",
+        "输出要服务四个目的：1) 今天拍什么短视频；2) 今天写什么 SEO 内容；3) 今天验证什么小工具；4) 今天明确不该做什么。",
+        "不要建议直接注册域名或搭建完整网站，除非 evidenceLevel 是 强证据。",
+        "每个机会都必须包含 missingEvidence，明确写出还缺什么证据。",
+        "actionToday 必须是 2 到 4 个 30 分钟内能完成的动作，例如搜关键词、找竞品、看定价页、看 affiliate、写一条脚本、发一个帖子收反馈。",
+        "buildAngle 必须是最小站点形态，例如对比页、计算器、模板页、检查清单、目录页、教程页。不要默认做 SaaS。",
+        "contentAngle 必须像真人短视频选题，讲具体冲突、具体人群、具体场景，不要写泛泛的商业术语。",
+        "评分标准是证据评分，不是想象空间评分。",
         "每个机会都必须用 1 句 summary 说明它是什么。",
-        "opportunityScore 必须是 1 到 5 的整数，5 代表最值得本周验证。",
-        "scoreBreakdown 是 5 个 0/1 分项：realPain, searchDemand, easyMvp, monetizable, contentPotential。",
+        "opportunityScore 必须是 1 到 5 的整数，5 代表最值得本周验证，不代表直接开做完整产品。",
+        "scoreBreakdown 是 5 个 0/1 分项：painEvidence, searchIntent, monetizationProof, mvpFit, contentFit。",
+        "painEvidence=1 表示输入里能看到具体痛点或强讨论；searchIntent=1 表示能推导出明确搜索词；monetizationProof=1 表示有清晰付费、广告、affiliate、模板或工具变现路径；mvpFit=1 表示一周内能做出轻量页面或工具；contentFit=1 表示适合拍成普通人听得懂的短视频或图文。",
         "opportunityScore 必须等于 scoreBreakdown 五项之和；如果总分为 0，opportunityScore 输出 1。",
-        "followUpDecision 只能是 是、观察、否。4-5 分一般是 是，3 分一般是 观察，1-2 分一般是 否。",
-        "seoKeywords 每项 3 到 6 个关键词。",
-        "siteIdeas 每项 2 到 4 个具体页面或工具站想法。",
-        "shortVideoAngle 用 1 句中文说明 30-60 秒短视频应该怎么讲，不能模仿任何具体博主口吻。",
-        "topPicks 输出 1 到 3 个今日最推荐机会，必须来自 topOpportunities。",
-        "weeklyExperiments 给 3 个本周可做的验证实验。",
+        "evidenceLevel 只能是 强证据、中证据、弱证据。只有同时具备痛点、搜索意图、变现证据时才能是强证据。",
+        "followUpDecision 只能是 验证、观察、放弃。4-5 分一般是 验证，3 分一般是 观察，1-2 分一般是 放弃。",
+        "topPicks 输出 1 到 3 个今日最推荐验证的机会，必须来自 topOpportunities。",
+        "topPicks.actionToday 必须是当天最小动作，不允许写注册域名、搭建完整网站、做完整 SaaS。",
+        "weeklyExperiments 给 3 个本周可做的验证实验，每个实验必须能用手工或单页完成。",
         "必须使用英文 JSON 键名：date, dailyBrief, topPicks, topOpportunities, keywordClusters, avoidList, weeklyExperiments。",
         "topPicks 每一项必须包含这些英文键名：title, why, actionToday。",
-        "topOpportunities 每一项必须包含这些英文键名：title, source, originalName, summary, demand, targetUsers, monetization, seoKeywords, siteIdeas, scoreBreakdown, opportunityScore, scoreReason, followUpDecision, nextValidationStep, shortVideoAngle, url。",
+        "topOpportunities 每一项必须包含这些英文键名：title, source, originalName, summary, demand, targetUsers, monetization, seoKeywords, siteIdeas, scoreBreakdown, opportunityScore, scoreReason, evidenceLevel, followUpDecision, nextValidationStep, actionToday, missingEvidence, contentAngle, buildAngle, shortVideoAngle, url。",
         "keywordClusters 每一项必须包含这些英文键名：cluster, keywords, why。",
         "avoidList 每一项必须包含这些英文键名：name, reason。",
         "weeklyExperiments 每一项必须包含这些英文键名：idea, landingPageAngle, validationStep。",
         "只要输入 products 或 stories 非空，topOpportunities 至少输出 5 项，keywordClusters 至少输出 3 项，avoidList 至少输出 2 项，weeklyExperiments 至少输出 3 项。",
-        "不要因为信息不完整而输出空数组；可以基于产品描述、评论数和标题做合理商业假设，并在验证动作里要求人工验证。",
         "严格按这个 JSON 形状输出：",
-        '{"date":"YYYY-MM-DD","dailyBrief":"中文今日总览","topPicks":[{"title":"中文机会标题","why":"中文推荐理由","actionToday":"中文今日动作"}],"topOpportunities":[{"title":"中文机会标题","source":"Product Hunt","originalName":"原产品或新闻名","summary":"中文一句话简介","demand":"中文需求判断","targetUsers":"中文目标用户","monetization":"中文变现方式","seoKeywords":["中文关键词"],"siteIdeas":["中文页面或工具想法"],"scoreBreakdown":{"realPain":1,"searchDemand":1,"easyMvp":1,"monetizable":1,"contentPotential":0},"opportunityScore":4,"scoreReason":"中文评分理由","followUpDecision":"是","nextValidationStep":"中文验证动作","shortVideoAngle":"中文短视频讲法","url":"https://example.com"}],"keywordClusters":[{"cluster":"中文集群名","keywords":["中文关键词"],"why":"中文理由"}],"avoidList":[{"name":"中文名称","reason":"中文理由"}],"weeklyExperiments":[{"idea":"中文实验","landingPageAngle":"中文落地页角度","validationStep":"中文验证动作"}]}',
+        '{"date":"YYYY-MM-DD","dailyBrief":"中文今日总览","topPicks":[{"title":"中文机会标题","why":"中文推荐理由","actionToday":"中文今日最小动作"}],"topOpportunities":[{"title":"中文机会标题","source":"Product Hunt","originalName":"原产品或新闻名","summary":"中文一句话简介","demand":"中文需求判断","targetUsers":"中文目标用户","monetization":"中文变现方式","seoKeywords":["中文关键词"],"siteIdeas":["中文页面或工具想法"],"scoreBreakdown":{"painEvidence":1,"searchIntent":1,"monetizationProof":0,"mvpFit":1,"contentFit":1},"opportunityScore":4,"scoreReason":"中文评分理由","evidenceLevel":"中证据","followUpDecision":"验证","nextValidationStep":"中文验证动作","actionToday":["中文今日动作1","中文今日动作2"],"missingEvidence":["中文缺失证据1"],"contentAngle":"中文内容选题角度","buildAngle":"中文最小建站角度","shortVideoAngle":"中文短视频讲法","url":"https://example.com"}],"keywordClusters":[{"cluster":"中文集群名","keywords":["中文关键词"],"why":"中文理由"}],"avoidList":[{"name":"中文名称","reason":"中文理由"}],"weeklyExperiments":[{"idea":"中文实验","landingPageAngle":"中文落地页角度","validationStep":"中文验证动作"}]}',
       ].join("\n"),
       {
         date: input.date,
@@ -197,8 +206,17 @@ function isUsefulOpportunityItem(item: OpportunityItem): boolean {
     item.opportunityScore <= 5 &&
     item.opportunityScore === getScoreFromBreakdown(item.scoreBreakdown) &&
     isUsefulText(item.scoreReason) &&
-    ["是", "观察", "否"].includes(item.followUpDecision) &&
+    ["强证据", "中证据", "弱证据"].includes(item.evidenceLevel) &&
+    ["验证", "观察", "放弃"].includes(item.followUpDecision) &&
     isUsefulText(item.nextValidationStep) &&
+    Array.isArray(item.actionToday) &&
+    item.actionToday.length > 0 &&
+    item.actionToday.every(isUsefulText) &&
+    Array.isArray(item.missingEvidence) &&
+    item.missingEvidence.length > 0 &&
+    item.missingEvidence.every(isUsefulText) &&
+    isUsefulText(item.contentAngle) &&
+    isUsefulText(item.buildAngle) &&
     isUsefulText(item.shortVideoAngle)
   );
 }
@@ -210,11 +228,11 @@ function isValidScoreBreakdown(value: unknown): value is OpportunityItem["scoreB
 
   const breakdown = value as Record<string, unknown>;
   return [
-    breakdown.realPain,
-    breakdown.searchDemand,
-    breakdown.easyMvp,
-    breakdown.monetizable,
-    breakdown.contentPotential,
+    breakdown.painEvidence,
+    breakdown.searchIntent,
+    breakdown.monetizationProof,
+    breakdown.mvpFit,
+    breakdown.contentFit,
   ].every((score) => score === 0 || score === 1);
 }
 
@@ -222,11 +240,11 @@ function getScoreFromBreakdown(
   breakdown: OpportunityItem["scoreBreakdown"]
 ): number {
   const score =
-    breakdown.realPain +
-    breakdown.searchDemand +
-    breakdown.easyMvp +
-    breakdown.monetizable +
-    breakdown.contentPotential;
+    breakdown.painEvidence +
+    breakdown.searchIntent +
+    breakdown.monetizationProof +
+    breakdown.mvpFit +
+    breakdown.contentFit;
 
   return Math.max(1, score);
 }
@@ -241,14 +259,14 @@ export function formatOpportunityRadar(radar: OpportunityRadar): string {
   md += `**今日判断**: ${radar.dailyBrief}\n\n`;
   md += `---\n\n`;
 
-  md += `## 今日最值得跟进\n\n`;
+  md += `## 今日最值得验证\n\n`;
   if (radar.topPicks.length === 0) {
-    md += `今天没有明显高分机会，建议只观察关键词和讨论方向。\n\n`;
+    md += `今天没有明显值得马上验证的机会，建议只观察关键词和讨论方向。\n\n`;
   } else {
     radar.topPicks.forEach((pick, index) => {
       md += `${index + 1}. **${pick.title}**\n`;
       md += `   - 推荐理由: ${pick.why}\n`;
-      md += `   - 今日动作: ${pick.actionToday}\n`;
+      md += `   - 今日最小动作: ${pick.actionToday}\n`;
     });
     md += `\n`;
   }
@@ -265,10 +283,21 @@ export function formatOpportunityRadar(radar: OpportunityRadar): string {
     md += `- **建站机会**: ${item.siteIdeas.join("；")}\n`;
     md += `- **SEO 关键词**: ${item.seoKeywords.join("、")}\n`;
     md += `- **变现方式**: ${item.monetization}\n`;
-    md += `- **评分拆解**: 真实痛点 ${item.scoreBreakdown.realPain}/1，搜索需求 ${item.scoreBreakdown.searchDemand}/1，MVP 难度 ${item.scoreBreakdown.easyMvp}/1，可变现 ${item.scoreBreakdown.monetizable}/1，内容传播 ${item.scoreBreakdown.contentPotential}/1\n`;
+    md += `- **评分拆解**: 痛点证据 ${item.scoreBreakdown.painEvidence}/1，搜索意图 ${item.scoreBreakdown.searchIntent}/1，变现证据 ${item.scoreBreakdown.monetizationProof}/1，MVP 适配 ${item.scoreBreakdown.mvpFit}/1，内容适配 ${item.scoreBreakdown.contentFit}/1\n`;
     md += `- **机会评分**: ${item.opportunityScore}/5，${item.scoreReason}\n`;
+    md += `- **证据等级**: ${item.evidenceLevel}\n`;
     md += `- **是否值得跟进**: ${item.followUpDecision}\n`;
+    md += `- **最小建站角度**: ${item.buildAngle}\n`;
+    md += `- **内容选题角度**: ${item.contentAngle}\n`;
     md += `- **本周验证**: ${item.nextValidationStep}\n`;
+    md += `- **今日动作**:\n`;
+    item.actionToday.forEach((action) => {
+      md += `  - ${action}\n`;
+    });
+    md += `- **缺少证据**:\n`;
+    item.missingEvidence.forEach((evidence) => {
+      md += `  - ${evidence}\n`;
+    });
     md += `- **短视频脚本角度**: ${item.shortVideoAngle}\n`;
     if (item.url) {
       md += `- **链接**: ${item.url}\n`;
@@ -296,6 +325,23 @@ export function formatOpportunityRadar(radar: OpportunityRadar): string {
   });
 
   return md;
+}
+
+function buildFallbackActions(keywords: string[]): string[] {
+  const keywordText = keywords.filter(Boolean).slice(0, 3).join("、");
+  return [
+    `搜索 ${keywordText}，记录前 10 个结果是否有工具页、对比页、广告或定价页。`,
+    "找 5 个竞品或相邻页面，记录它们靠订阅、广告、联盟、模板还是咨询变现。",
+    "写 1 条 45 秒短视频脚本，只讲一个具体痛点和一个最小验证动作。",
+  ];
+}
+
+function buildFallbackMissingEvidence(): string[] {
+  return [
+    "还没有搜索量数据。",
+    "还没有确认竞品是否真实变现。",
+    "还没有从目标用户处拿到直接反馈。",
+  ];
 }
 
 function buildFallbackRadar(input: OpportunityInput): OpportunityRadar {
@@ -334,10 +380,21 @@ function buildFallbackRadar(input: OpportunityInput): OpportunityRadar {
       Math.max(1, Math.ceil((product.commentsCount || 1) / 30))
     ),
     scoreReason: "基于 Product Hunt 评论量做初步热度估计，需要再查搜索需求。",
+    evidenceLevel: getEvidenceLevel(
+      Math.min(5, Math.max(1, Math.ceil((product.commentsCount || 1) / 30)))
+    ),
     followUpDecision: getFollowUpDecision(
       Math.min(5, Math.max(1, Math.ceil((product.commentsCount || 1) / 30)))
     ),
     nextValidationStep: "搜索相关关键词，记录竞品页面、广告投放和用户抱怨。",
+    actionToday: buildFallbackActions([
+      product.name,
+      product.taglineZh || product.tagline,
+      `${product.name} 替代品`,
+    ]),
+    missingEvidence: buildFallbackMissingEvidence(),
+    contentAngle: `用一个具体场景讲清楚 ${product.name} 背后的痛点，而不是介绍产品本身。`,
+    buildAngle: `${product.name} 替代品页、对比页或模板页，先不做完整 SaaS。`,
     shortVideoAngle: `用 30 秒讲清楚 ${product.name} 背后的具体痛点，再给出一个可做成网站的替代方案。`,
     url: product.url,
   }));
@@ -374,10 +431,21 @@ function buildFallbackRadar(input: OpportunityInput): OpportunityRadar {
       Math.max(1, Math.ceil((story.descendants || 1) / 80))
     ),
     scoreReason: "基于 HackerNews 评论量做初步热度估计，需要验证是否有商业搜索意图。",
+    evidenceLevel: getEvidenceLevel(
+      Math.min(5, Math.max(1, Math.ceil((story.descendants || 1) / 80)))
+    ),
     followUpDecision: getFollowUpDecision(
       Math.min(5, Math.max(1, Math.ceil((story.descendants || 1) / 80)))
     ),
     nextValidationStep: "查看评论区痛点，提取反复出现的问题和付费场景。",
+    actionToday: buildFallbackActions([
+      story.titleZh || story.title,
+      `${story.siteName || "相关"} 工具`,
+      "替代方案",
+    ]),
+    missingEvidence: buildFallbackMissingEvidence(),
+    contentAngle: "用这条讨论里的冲突切入，讲清楚谁在痛、为什么现在痛。",
+    buildAngle: "先做解读页、工具清单或检查清单，不做完整平台。",
     shortVideoAngle: `用这条 HN 讨论切入，讲清楚开发者为什么关心它，以及能不能拆成一个轻量工具站。`,
     url: story.url,
   }));
@@ -395,8 +463,8 @@ function buildFallbackRadar(input: OpportunityInput): OpportunityRadar {
       .slice(0, 3)
       .map((item) => ({
         title: item.title,
-        why: item.scoreReason,
-        actionToday: item.nextValidationStep,
+        why: `${item.evidenceLevel}，${item.scoreReason}`,
+        actionToday: item.actionToday[0],
       })),
     topOpportunities,
     keywordClusters: [
@@ -450,22 +518,34 @@ function buildFallbackScoreBreakdown(
   score: number
 ): OpportunityItem["scoreBreakdown"] {
   return {
-    realPain: score >= 1 ? 1 : 0,
-    searchDemand: score >= 2 ? 1 : 0,
-    easyMvp: score >= 3 ? 1 : 0,
-    monetizable: score >= 4 ? 1 : 0,
-    contentPotential: score >= 5 ? 1 : 0,
+    painEvidence: score >= 1 ? 1 : 0,
+    searchIntent: score >= 2 ? 1 : 0,
+    monetizationProof: score >= 4 ? 1 : 0,
+    mvpFit: score >= 3 ? 1 : 0,
+    contentFit: score >= 5 ? 1 : 0,
   };
 }
 
 function getFollowUpDecision(score: number): OpportunityItem["followUpDecision"] {
   if (score >= 4) {
-    return "是";
+    return "验证";
   }
 
   if (score === 3) {
     return "观察";
   }
 
-  return "否";
+  return "放弃";
+}
+
+function getEvidenceLevel(score: number): OpportunityItem["evidenceLevel"] {
+  if (score >= 5) {
+    return "强证据";
+  }
+
+  if (score >= 3) {
+    return "中证据";
+  }
+
+  return "弱证据";
 }
