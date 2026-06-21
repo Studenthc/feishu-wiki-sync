@@ -4,6 +4,7 @@ import { getTopStories, getNewStories, type HNStory } from "./lib/hacker-news";
 import { formatPHProducts, formatHNStories } from "./lib/formatter";
 import { localizeProducts, localizeStories } from "./lib/chinese";
 import { buildOpportunityRadar, formatOpportunityRadar } from "./lib/opportunity";
+import { buildCaseStudyReport, formatCaseStudyReport } from "./lib/case-study";
 import { execFileSync } from "child_process";
 import * as fs from "fs/promises";
 
@@ -22,6 +23,8 @@ async function main() {
   const dryRun = process.argv.includes("--dry-run");
   const opportunity = process.argv.includes("--opportunity");
   const opportunityOnly = process.argv.includes("--opportunity-only");
+  const caseStudy = process.argv.includes("--case-study");
+  const caseStudyOnly = process.argv.includes("--case-study-only");
   const syncDate = getArgValue("--date") || today;
   const source = getArgValue("--source") || "all";
   if (!["all", "ph", "hn"].includes(source)) {
@@ -30,6 +33,8 @@ async function main() {
   const maxOpportunityItems = parseMaxOpportunityItems(
     getArgValue("--max-opportunity-items")
   );
+  const maxCaseStudies = parseMaxCaseStudies(getArgValue("--max-case-studies"));
+  const analysisOnly = opportunityOnly || caseStudyOnly;
 
   const phToken = process.env.PH_TOKEN || "";
   const feishuSpaceId = getFeishuSpaceId(dryRun);
@@ -71,7 +76,7 @@ async function main() {
       opportunityProducts.push(...newProducts);
       const newMd = formatPHProducts(newProducts, "new");
 
-      if (!opportunityOnly) {
+      if (!analysisOnly) {
         docs.push(
           { title: `Product Hunt 热门产品 - ${syncDate}`, content: popularMd },
           { title: `Product Hunt 今日新品 - ${syncDate}`, content: newMd }
@@ -93,7 +98,7 @@ async function main() {
     opportunityStories.push(...topStories);
     if (topStories.length > 0) {
       const topMd = formatHNStories(topStories, "top");
-      if (!opportunityOnly) {
+      if (!analysisOnly) {
         docs.push({ title: `HackerNews 热门新闻 - ${syncDate}`, content: topMd });
       }
     } else {
@@ -105,7 +110,7 @@ async function main() {
     opportunityStories.push(...newStories);
     if (newStories.length > 0) {
       const newStoriesMd = formatHNStories(newStories, "new");
-      if (!opportunityOnly) {
+      if (!analysisOnly) {
         docs.push({ title: `HackerNews 最新新闻 - ${syncDate}`, content: newStoriesMd });
       }
     } else {
@@ -124,6 +129,20 @@ async function main() {
     docs.push({
       title: `每日机会雷达 - ${syncDate}`,
       content: formatOpportunityRadar(normalizeOpportunityRadar(radar, syncDate)),
+    });
+  }
+
+  if (caseStudy || caseStudyOnly) {
+    console.log("生成可抄作业产品案例拆解...");
+    const report = await buildCaseStudyReport({
+      date: syncDate,
+      products: opportunityProducts,
+      stories: opportunityStories,
+      maxCases: maxCaseStudies,
+    });
+    docs.push({
+      title: `可抄作业产品案例拆解 - ${syncDate}`,
+      content: formatCaseStudyReport(normalizeCaseStudyReport(report, syncDate)),
     });
   }
 
@@ -152,6 +171,7 @@ function usage() {
       "  pnpm sync:daily -- --dry-run",
       "  pnpm sync:daily -- --date=2026-05-14 --source=ph",
       "  pnpm sync:daily -- --date=2026-05-14 --source=ph --opportunity-only --dry-run",
+      "  pnpm sync:daily -- --date=2026-05-14 --source=all --case-study-only --dry-run",
       "",
       "Options:",
       "  --date=YYYY-MM-DD            Date used in titles and Product Hunt date filter",
@@ -159,6 +179,9 @@ function usage() {
       "  --opportunity                Create an additional daily opportunity radar doc",
       "  --opportunity-only           Create only the daily opportunity radar doc",
       "  --max-opportunity-items=N    Max radar input/output items, 1-20, default 8",
+      "  --case-study                 Create an additional copyable product case-study doc",
+      "  --case-study-only            Create only the copyable product case-study doc",
+      "  --max-case-studies=N         Max deep case studies, 1-5, default 3",
       "  --dry-run                    Preview docs without creating Feishu wiki pages",
       "",
       "Environment:",
@@ -202,6 +225,23 @@ function parseMaxOpportunityItems(value: string | undefined): number {
   return parsed;
 }
 
+function parseMaxCaseStudies(value: string | undefined): number {
+  if (value === undefined) {
+    return 3;
+  }
+
+  if (!/^\d+$/.test(value)) {
+    throw new Error("--max-case-studies must be an integer between 1 and 5");
+  }
+
+  const parsed = Number.parseInt(value, 10);
+  if (parsed < 1 || parsed > 5) {
+    throw new Error("--max-case-studies must be an integer between 1 and 5");
+  }
+
+  return parsed;
+}
+
 function normalizeOpportunityRadar(
   radar: Awaited<ReturnType<typeof buildOpportunityRadar>>,
   fallbackDate: string
@@ -217,6 +257,18 @@ function normalizeOpportunityRadar(
     weeklyExperiments: Array.isArray(radar.weeklyExperiments)
       ? radar.weeklyExperiments
       : [],
+  };
+}
+
+function normalizeCaseStudyReport(
+  report: Awaited<ReturnType<typeof buildCaseStudyReport>>,
+  fallbackDate: string
+): Awaited<ReturnType<typeof buildCaseStudyReport>> {
+  return {
+    ...report,
+    date: report.date || fallbackDate,
+    cases: Array.isArray(report.cases) ? report.cases : [],
+    rejected: Array.isArray(report.rejected) ? report.rejected : [],
   };
 }
 

@@ -64,4 +64,4 @@ jobs:
           FEISHU_APP_ID: ${{ secrets.FEISHU_APP_ID }}
           FEISHU_APP_SECRET: ${{ secrets.FEISHU_APP_SECRET }}
           FEISHU_SPACE_ID: ${{ secrets.FEISHU_SPACE_ID }}
-        run: pnpm sync:daily -- --opportunity
+        run: pnpm sync:daily -- --opportunity --case-study

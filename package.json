@@ -2,9 +2,11 @@
   "name": "feishu-wiki-sync",
   "private": true,
   "type": "module",
+  "packageManager": "pnpm@9.15.9",
   "scripts": {
     "sync:daily": "tsx scripts/sync-daily.ts",
     "test:opportunity": "tsx scripts/lib/opportunity.test.ts",
+    "test:case-study": "tsx scripts/lib/case-study.test.ts",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {

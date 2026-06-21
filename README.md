@@ -142,10 +142,36 @@ pnpm sync:daily -- --source=all --opportunity-only --max-opportunity-items=3 --d
 
 如果输出里出现泛泛的 "注册域名"、"搭建完整网站"、"做 SaaS" 但没有搜索词、竞品、变现证据和当天验证动作，需要继续收紧 prompt 或把该机会降级为 `观察` / `放弃`。
 
+## 可抄作业产品案例拆解
+
+除了机会雷达，也可以生成更像付费产品案例研究的深度文档：
+
+```bash
+pnpm sync:daily -- --source=all --case-study-only --max-case-studies=3 --dry-run
+```
+
+这篇文档会把 PH/HN 候选拆成类似「可以抄作业的闷声发财产品」的结构：
+
+- 名字、网址、上线时间
+- 上月付费行为陡增
+- 解决什么问题
+- 用户是谁
+- 用户为什么付费
+- 技术原理是什么
+- 小团队怎么抄
+- 今天怎么验证
+- 付费陡增的原因
+- 风险：不要踩什么坑
+
+注意：PH/HN 本身没有真实「上月付费行为陡增」数据，所以文档会把该字段标为 `未验证`，不会编造增长百分比。它的价值是把热点拆成更接近付款动作的产品案例，而不是证明这些产品已经赚钱。
+
 GitHub Actions 当前会每天运行：
 
 ```bash
-pnpm sync:daily -- --opportunity
+pnpm sync:daily -- --opportunity --case-study
 ```
 
-因此每天会创建普通内容列表，并额外创建一篇 `每日机会雷达 - YYYY-MM-DD`。
+因此每天会创建普通内容列表，并额外创建：
+
+- `每日机会雷达 - YYYY-MM-DD`
+- `可抄作业产品案例拆解 - YYYY-MM-DD`
