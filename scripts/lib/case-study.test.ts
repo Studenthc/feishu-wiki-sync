@@ -26,6 +26,9 @@ const report: CaseStudyReport = {
         "本质是统一代理层，加上模型路由、缓存、日志、成本统计和告警。",
       copyStrategy:
         "不要抄完整 AI Gateway，先抄一个更窄的 AI API 成本计算器。",
+      copyThis:
+        "只做 AI API 月账单估算器，面向已有 AI 工具站的独立开发者。",
+      doNotCopy: "不要做完整网关、统一代理层和团队权限系统。",
       smallTeamWedges: [
         "Claude / Gemini / DeepSeek 成本对比页",
         "AI API 月账单估算器",
@@ -37,6 +40,11 @@ const report: CaseStudyReport = {
         "搜索 AI API cost calculator，记录前 10 个结果的页面形态和变现方式。",
         "找 5 个 AI 工具站开发者，问他们是否遇到 API 成本失控。",
         "用 Google Sheet 做一个成本计算器原型，发到开发者社区收反馈。",
+      ],
+      todayExecutionPlan: [
+        "搜索 AI API cost calculator 和 AI API pricing calculator，截图前 10 个页面。",
+        "写一个页面标题：AI API 月账单估算器。",
+        "用表格列出 5 个常用模型的输入输出价格。",
       ],
       growthReason:
         "AI API 调用量持续增长，小团队会越来越在意成本、缓存和模型切换。",
@@ -52,6 +60,11 @@ const report: CaseStudyReport = {
         "没有真实搜索量数据。",
         "没有确认 Respan 是否有公开 affiliate。",
         "没有直接用户访谈。",
+      ],
+      killCriteria: [
+        "搜索结果没有任何商业化页面。",
+        "5 个开发者都说 API 成本不是当前痛点。",
+        "页面无法做成计算器、模板或对比页。",
       ],
     },
   ],
@@ -70,6 +83,16 @@ assert.match(markdown, /解决什么问题/);
 assert.match(markdown, /用户为什么付费/);
 assert.match(markdown, /技术原理是什么/);
 assert.match(markdown, /小团队怎么抄/);
+assert.match(markdown, /证据快照/);
+assert.match(markdown, /已确认/);
+assert.match(markdown, /未验证/);
+assert.match(markdown, /下一步补证/);
+assert.match(markdown, /今天只看这一个/);
+assert.match(markdown, /直接抄这个/);
+assert.match(markdown, /不要抄这个/);
+assert.match(markdown, /今天 30 分钟执行/);
+assert.match(markdown, /什么时候放弃/);
+assert.match(markdown, /放弃标准/);
 assert.match(markdown, /风险：不要踩什么坑/);
 assert.match(markdown, /上月付费行为陡增\*\*: 未验证/);
 assert.match(markdown, /AI API 月账单估算器/);

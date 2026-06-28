@@ -5,6 +5,7 @@ import { formatPHProducts, formatHNStories } from "./lib/formatter";
 import { localizeProducts, localizeStories } from "./lib/chinese";
 import { buildOpportunityRadar, formatOpportunityRadar } from "./lib/opportunity";
 import { buildCaseStudyReport, formatCaseStudyReport } from "./lib/case-study";
+import { sanitizeLarkMarkdown } from "./lib/lark-doc-xml";
 import { execFileSync } from "child_process";
 import * as fs from "fs/promises";
 
@@ -178,10 +179,10 @@ function usage() {
       "  --source=all|ph|hn           Sync all sources, Product Hunt only, or HackerNews only",
       "  --opportunity                Create an additional daily opportunity radar doc",
       "  --opportunity-only           Create only the daily opportunity radar doc",
-      "  --max-opportunity-items=N    Max radar input/output items, 1-20, default 8",
+      "  --max-opportunity-items=N    Max radar input/output items, 1-20, default 3",
       "  --case-study                 Create an additional copyable product case-study doc",
       "  --case-study-only            Create only the copyable product case-study doc",
-      "  --max-case-studies=N         Max deep case studies, 1-5, default 3",
+      "  --max-case-studies=N         Max deep case studies, 1-5, default 1",
       "  --dry-run                    Preview docs without creating Feishu wiki pages",
       "",
       "Environment:",
@@ -210,7 +211,7 @@ function getArgValue(name: string): string | undefined {
 
 function parseMaxOpportunityItems(value: string | undefined): number {
   if (value === undefined) {
-    return 8;
+    return 3;
   }
 
   if (!/^\d+$/.test(value)) {
@@ -227,7 +228,7 @@ function parseMaxOpportunityItems(value: string | undefined): number {
 
 function parseMaxCaseStudies(value: string | undefined): number {
   if (value === undefined) {
-    return 3;
+    return 1;
   }
 
   if (!/^\d+$/.test(value)) {
@@ -310,7 +311,7 @@ function previewDoc(title: string, content: string) {
 
 async function createWikiDoc(spaceId: string, title: string, content: string) {
   const tempFile = `./temp-wiki-${Date.now()}.md`;
-  await fs.writeFile(tempFile, content, "utf-8");
+  await fs.writeFile(tempFile, sanitizeLarkMarkdown(content), "utf-8");
 
   try {
     const identityArgs =

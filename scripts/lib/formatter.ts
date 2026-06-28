@@ -14,7 +14,7 @@ export function formatPHProducts(products: PHProduct[], type: "popular" | "new")
     md += `**简介**: ${summarizeProduct(product)}\n\n`;
     md += `**标语**: ${product.taglineZh || product.tagline}\n\n`;
     md += `**描述**: ${product.descriptionZh || product.description || "暂无描述"}\n\n`;
-    md += `- **链接**: [访问产品](${product.url})\n`;
+    md += `- **链接**: ${product.url ? `[访问产品](${product.url})` : "未提供"}\n`;
     md += `- **评分**: ${product.reviewsCount} 个评分\n`;
     md += `- **评论数**: ${product.commentsCount} 条评论\n`;
     if (product.thumbnail?.url) {

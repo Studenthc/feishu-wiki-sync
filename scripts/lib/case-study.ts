@@ -32,6 +32,10 @@ export interface ProductCaseStudy {
   risks: string[];
   contentAngle: string;
   missingEvidence: string[];
+  copyThis?: string;
+  doNotCopy?: string;
+  todayExecutionPlan?: string[];
+  killCriteria?: string[];
 }
 
 export interface CaseStudyRejectedItem {
@@ -61,6 +65,8 @@ export async function buildCaseStudyReport(
         "你是一个面向独立开发者、小团队和内容站站长的产品案例研究员。",
         "请把 Product Hunt 和 HackerNews 输入拆成类似「可以抄作业的闷声发财产品」的中文案例报告。",
         "目标不是总结新闻，而是拆清楚：谁付费、为什么付费、小团队能抄哪个更窄切口、哪些坑不能踩。",
+        "默认只选最值得今天动手验证的少数案例。宁可少，不要泛。",
+        "如果没有非常明确的小团队可抄切口，cases 只输出 1 个。",
         "输出必须是中文 JSON，不能包含 Markdown。",
         "PH/HN 热度只是入选线索，不等于真实付费增长。",
         "禁止编造上线时间、收入、上月付费行为陡增百分比、affiliate 计划、融资、用户数。",
@@ -70,17 +76,21 @@ export async function buildCaseStudyReport(
         "用户是谁必须具体到可触达群体，不能只写开发者、创业者、小团队。",
         "用户为什么付费必须离钱近，例如提高转化、降低获客成本、减少人工、提高留存、减少退款、节省 API 成本。",
         "小团队怎么抄必须把大产品缩小到垂直切口，不能建议复制完整产品。",
+        "copyThis 必须写成一句能直接照做的窄动作，例如「只做 X 人群的 Y 计算器/模板/对比页」。",
+        "doNotCopy 必须明确写不要复制大产品的哪一部分。",
         "minimumMvp 必须是一周内可做的最小形态：单页、目录、计算器、模板、检查清单、对比页或手工服务。",
         "validationActions 必须是 2 到 4 个今天能做的动作。",
+        "todayExecutionPlan 必须是 3 个 30 分钟内能开始的动作，不要写开发完整产品。",
+        "killCriteria 必须是 2 到 3 个放弃标准，例如搜不到竞品变现、用户不承认痛点、关键词没有购买意图。",
         "risks 必须包含 2 到 4 个具体坑。",
         "missingEvidence 必须写还缺什么证据。",
         "cases 输出 1 到 maxCases 个最值得深拆的案例。",
         "rejected 输出 1 到 3 个不建议深拆的候选及原因。",
         "必须使用英文 JSON 键名：date, summary, cases, rejected。",
-        "cases 每一项必须包含这些英文键名：title, source, originalName, productName, url, launchTime, paidGrowthSignal, evidenceLevel, whySelected, problem, users, paymentReason, technicalPrinciple, copyStrategy, smallTeamWedges, minimumMvp, validationActions, growthReason, monetizationPath, risks, contentAngle, missingEvidence。",
+        "cases 每一项必须包含这些英文键名：title, source, originalName, productName, url, launchTime, paidGrowthSignal, evidenceLevel, whySelected, problem, users, paymentReason, technicalPrinciple, copyStrategy, smallTeamWedges, minimumMvp, validationActions, growthReason, monetizationPath, risks, contentAngle, missingEvidence, copyThis, doNotCopy, todayExecutionPlan, killCriteria。",
         "rejected 每一项必须包含英文键名：name, reason。",
         "严格按这个 JSON 形状输出：",
-        '{"date":"YYYY-MM-DD","summary":"中文总览","cases":[{"title":"中文案例标题","source":"Product Hunt","originalName":"原产品或新闻名","productName":"产品名","url":"https://example.com","launchTime":"未验证","paidGrowthSignal":"未验证；当前只有 PH/HN 热度和描述信号","evidenceLevel":"中证据","whySelected":"中文入选理由","problem":"中文说明解决什么问题","users":"中文具体用户","paymentReason":"中文说明用户为什么付费","technicalPrinciple":"中文技术原理","copyStrategy":"中文小团队怎么抄","smallTeamWedges":["中文小切口1"],"minimumMvp":"中文最小 MVP","validationActions":["中文验证动作1","中文验证动作2"],"growthReason":"中文说明为什么可能增长","monetizationPath":"中文变现路径","risks":["中文风险1"],"contentAngle":"中文内容选题角度","missingEvidence":["中文缺失证据1"]}],"rejected":[{"name":"中文名称","reason":"中文原因"}]}',
+        '{"date":"YYYY-MM-DD","summary":"中文总览","cases":[{"title":"中文案例标题","source":"Product Hunt","originalName":"原产品或新闻名","productName":"产品名","url":"https://example.com","launchTime":"未验证","paidGrowthSignal":"未验证；当前只有 PH/HN 热度和描述信号","evidenceLevel":"中证据","whySelected":"中文入选理由","problem":"中文说明解决什么问题","users":"中文具体用户","paymentReason":"中文说明用户为什么付费","technicalPrinciple":"中文技术原理","copyStrategy":"中文小团队怎么抄","smallTeamWedges":["中文小切口1"],"minimumMvp":"中文最小 MVP","validationActions":["中文验证动作1","中文验证动作2"],"growthReason":"中文说明为什么可能增长","monetizationPath":"中文变现路径","risks":["中文风险1"],"contentAngle":"中文内容选题角度","missingEvidence":["中文缺失证据1"],"copyThis":"中文一句话直接照做动作","doNotCopy":"中文一句话不要抄什么","todayExecutionPlan":["中文 30 分钟动作1"],"killCriteria":["中文放弃标准1"]}],"rejected":[{"name":"中文名称","reason":"中文原因"}]}',
       ].join("\n"),
       {
         date: input.date,
@@ -180,8 +190,27 @@ function isUsefulText(value: unknown): value is string {
 
 export function formatCaseStudyReport(report: CaseStudyReport): string {
   let md = `# 可抄作业产品案例拆解 - ${report.date}\n\n`;
-  md += `> 目标：从 PH/HN 线索里拆出更像「已付费产品案例」的结构。没有真实付费增长证据时，必须标为未验证。\n\n`;
+  md += `> 目标：每天只从 PH/HN 线索里挑少数可验证切口。没有真实付费增长证据时，必须标为未验证。\n\n`;
   md += `**今日判断**: ${report.summary}\n\n`;
+
+  const mainCase = report.cases[0];
+  if (mainCase) {
+    md += `## 今天只看这一个\n\n`;
+    md += `**${mainCase.title}**\n\n`;
+    md += `- **直接抄这个**: ${mainCase.copyThis || mainCase.copyStrategy}\n`;
+    md += `- **不要抄这个**: ${mainCase.doNotCopy || "不要复制完整产品，只抄一个能当天验证的小切口。"}\n`;
+    md += `- **用户为什么可能付费**: ${mainCase.paymentReason}\n`;
+    md += `- **今天 30 分钟执行**:\n`;
+    getTodayExecutionPlan(mainCase).forEach((action) => {
+      md += `  - ${action}\n`;
+    });
+    md += `- **放弃标准**:\n`;
+    getKillCriteria(mainCase).forEach((criterion) => {
+      md += `  - ${criterion}\n`;
+    });
+    md += `\n`;
+  }
+
   md += `---\n\n`;
 
   report.cases.forEach((item, index) => {
@@ -193,12 +222,18 @@ export function formatCaseStudyReport(report: CaseStudyReport): string {
     md += `- **上月付费行为陡增**: ${item.paidGrowthSignal}\n`;
     md += `- **证据等级**: ${item.evidenceLevel}\n`;
     md += `- **为什么入选**: ${item.whySelected}\n\n`;
+    md += `### 证据快照\n\n`;
+    md += `- **已确认**: ${buildConfirmedEvidence(item)}\n`;
+    md += `- **未验证**: ${item.paidGrowthSignal}\n`;
+    md += `- **下一步补证**: ${item.missingEvidence[0] || "需要补充真实付费、搜索和竞品证据。"}\n\n`;
 
     md += `### 解决什么问题？\n\n${item.problem}\n\n`;
     md += `### 用户是谁？\n\n${item.users}\n\n`;
     md += `### 用户为什么付费？\n\n${item.paymentReason}\n\n`;
     md += `### 技术原理是什么？\n\n${item.technicalPrinciple}\n\n`;
     md += `### 小团队怎么抄？\n\n${item.copyStrategy}\n\n`;
+    md += `**直接抄这个**: ${item.copyThis || item.copyStrategy}\n\n`;
+    md += `**不要抄这个**: ${item.doNotCopy || "不要复制完整产品，只抄一个能当天验证的小切口。"}\n\n`;
     md += `可以先从这些更窄切口开始：\n`;
     item.smallTeamWedges.forEach((wedge) => {
       md += `- ${wedge}\n`;
@@ -207,7 +242,7 @@ export function formatCaseStudyReport(report: CaseStudyReport): string {
     md += `**最小 MVP**: ${item.minimumMvp}\n\n`;
 
     md += `### 今天怎么验证？\n\n`;
-    item.validationActions.forEach((action, actionIndex) => {
+    getTodayExecutionPlan(item).forEach((action, actionIndex) => {
       md += `${actionIndex + 1}. ${action}\n`;
     });
     md += `\n`;
@@ -224,6 +259,11 @@ export function formatCaseStudyReport(report: CaseStudyReport): string {
     item.missingEvidence.forEach((evidence) => {
       md += `- ${evidence}\n`;
     });
+    md += `\n`;
+    md += `### 什么时候放弃？\n\n`;
+    getKillCriteria(item).forEach((criterion) => {
+      md += `- ${criterion}\n`;
+    });
     md += `\n---\n\n`;
   });
 
@@ -239,10 +279,30 @@ export function formatCaseStudyReport(report: CaseStudyReport): string {
   return md;
 }
 
+function getTodayExecutionPlan(item: ProductCaseStudy): string[] {
+  const actions =
+    Array.isArray(item.todayExecutionPlan) && item.todayExecutionPlan.length > 0
+      ? item.todayExecutionPlan
+      : item.validationActions;
+  return actions.slice(0, 3);
+}
+
+function getKillCriteria(item: ProductCaseStudy): string[] {
+  if (Array.isArray(item.killCriteria) && item.killCriteria.length > 0) {
+    return item.killCriteria.slice(0, 3);
+  }
+
+  return [
+    "搜不到任何定价页、广告、affiliate、模板售卖或服务报价。",
+    "找不到具体人群承认这个问题影响收入、成本、效率或风险。",
+    "关键词只像资讯流量，没有购买、替代、价格、模板、工具等意图。",
+  ];
+}
+
 function buildFallbackCaseStudyReport(input: CaseStudyInput): CaseStudyReport {
-  const productCases = input.products.slice(0, input.maxCases).map((product) =>
-    buildFallbackProductCase(product)
-  );
+  const productCases = rankProductsForFallback(input.products)
+    .slice(0, input.maxCases)
+    .map((product) => buildFallbackProductCase(product));
   const remaining = Math.max(0, input.maxCases - productCases.length);
   const storyCases = input.stories.slice(0, remaining).map((story) =>
     buildFallbackStoryCase(story)
@@ -263,6 +323,20 @@ function buildFallbackCaseStudyReport(input: CaseStudyInput): CaseStudyReport {
       },
     ],
   };
+}
+
+function buildConfirmedEvidence(item: ProductCaseStudy): string {
+  const sourceLabel =
+    item.source === "Product Hunt" ? "PH 产品描述/评论热度" : "HN 讨论热度/页面摘要";
+  return `${sourceLabel}，来源链接：${item.url || "未提供"}`;
+}
+
+function rankProductsForFallback(products: PHProduct[]): PHProduct[] {
+  return [...products].sort((a, b) => {
+    const bScore = (b.commentsCount || 0) + (b.reviewsCount || 0);
+    const aScore = (a.commentsCount || 0) + (a.reviewsCount || 0);
+    return bScore - aScore;
+  });
 }
 
 function buildFallbackProductCase(product: PHProduct): ProductCaseStudy {
@@ -290,6 +364,8 @@ function buildFallbackProductCase(product: PHProduct): ProductCaseStudy {
     technicalPrinciple:
       "先把产品拆成数据输入、规则处理、页面展示、权限或自动化动作几个基础模块。",
     copyStrategy: "不要复制完整产品，先缩成一个垂直人群的单页工具或模板。",
+    copyThis: `只做「${product.name} 成本/替代/使用场景」里的一个单页工具或模板。`,
+    doNotCopy: "不要抄完整产品架构、账号系统、团队协作和复杂自动化。",
     smallTeamWedges: [
       `${product.name} 替代品对比页`,
       `${product.name} 使用场景模板`,
@@ -301,6 +377,7 @@ function buildFallbackProductCase(product: PHProduct): ProductCaseStudy {
       product.taglineZh || product.tagline,
       `${product.name} pricing`,
     ]),
+    todayExecutionPlan: buildFallbackTodayExecutionPlan(product.name),
     growthReason:
       "如果该方向增长，通常来自目标用户想节省时间、降低成本或提升转化，但当前还没有付费增长证据。",
     monetizationPath:
@@ -311,6 +388,7 @@ function buildFallbackProductCase(product: PHProduct): ProductCaseStudy {
     ],
     contentAngle: `为什么 ${product.name} 这个方向可能有人付费？先拆一个更小切口。`,
     missingEvidence: buildFallbackMissingEvidence(),
+    killCriteria: buildFallbackKillCriteria(),
   };
 }
 
@@ -338,6 +416,8 @@ function buildFallbackStoryCase(story: HNStory): ProductCaseStudy {
     technicalPrinciple:
       "先把讨论拆成问题库、检查清单、对比页、计算器或模板，不默认做平台。",
     copyStrategy: "不要复制新闻本身，应该复制它背后的问题解决路径。",
+    copyThis: `只做「${name}」背后问题的一页检查清单、工具目录或模板。`,
+    doNotCopy: "不要做泛资讯站、新闻聚合站或完整平台。",
     smallTeamWedges: [
       `${name} 解读页`,
       "相关工具清单",
@@ -349,6 +429,7 @@ function buildFallbackStoryCase(story: HNStory): ProductCaseStudy {
       story.siteName || "相关工具",
       "alternative",
     ]),
+    todayExecutionPlan: buildFallbackTodayExecutionPlan(name),
     growthReason:
       "如果该方向增长，通常来自讨论背后的风险、成本或效率问题被更多用户遇到。",
     monetizationPath:
@@ -359,7 +440,24 @@ function buildFallbackStoryCase(story: HNStory): ProductCaseStudy {
     ],
     contentAngle: `这条 HN 讨论背后，真正能抄的是哪个小工具？`,
     missingEvidence: buildFallbackMissingEvidence(),
+    killCriteria: buildFallbackKillCriteria(),
   };
+}
+
+function buildFallbackTodayExecutionPlan(name: string): string[] {
+  return [
+    `用 ${name} + pricing / alternative / template 搜索 10 分钟，确认有没有商业页面。`,
+    "写出一个只服务单一人群的页面标题，不超过 20 个字。",
+    "画出首屏：痛点、输入框或模板示例、付费/留资入口，先不写代码。",
+  ];
+}
+
+function buildFallbackKillCriteria(): string[] {
+  return [
+    "前 10 个搜索结果没有任何商业化页面或明确替代品。",
+    "找不到愿意承认该问题影响收入、成本或交付效率的具体用户。",
+    "最小页面只能写成泛介绍，无法落到计算器、模板、清单或对比页。",
+  ];
 }
 
 function buildFallbackValidationActions(keywords: string[]): string[] {

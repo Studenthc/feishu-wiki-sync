@@ -104,7 +104,7 @@ pnpm sync:daily -- --date=2026-05-14 --source=ph --opportunity-only
 控制分析条数：
 
 ```bash
-pnpm sync:daily -- --source=all --opportunity --max-opportunity-items=8
+pnpm sync:daily -- --source=all --opportunity --max-opportunity-items=3
 ```
 
 机会雷达会输出：
@@ -132,7 +132,7 @@ pnpm sync:daily -- --source=all --opportunity --max-opportunity-items=8
 
 `机会评分` 是证据评分，不是直接开做评分。`验证` 的意思是值得做当天验证动作，不代表已经适合注册域名或开发完整产品。
 
-这篇文档的目标不是搬运新闻，而是把 PH/HN 信息转成可以用于建站、SEO、affiliate、SaaS 小 MVP 和自媒体选题的中文判断。
+这篇文档的目标不是搬运新闻，而是把 PH/HN 信息转成可以用于建站、SEO、affiliate、SaaS 小 MVP 和自媒体选题的中文判断。默认只保留 3 条候选，避免每天堆出一篇需要人工再筛的泛列表。
 
 建议先本地预览质量，再决定是否写入飞书：
 
@@ -147,11 +147,15 @@ pnpm sync:daily -- --source=all --opportunity-only --max-opportunity-items=3 --d
 除了机会雷达，也可以生成更像付费产品案例研究的深度文档：
 
 ```bash
-pnpm sync:daily -- --source=all --case-study-only --max-case-studies=3 --dry-run
+pnpm sync:daily -- --source=all --case-study-only --max-case-studies=1 --dry-run
 ```
 
 这篇文档会把 PH/HN 候选拆成类似「可以抄作业的闷声发财产品」的结构：
 
+- 今天只看这一个
+- 直接抄这个 / 不要抄这个
+- 今天 30 分钟执行
+- 放弃标准
 - 名字、网址、上线时间
 - 上月付费行为陡增
 - 解决什么问题
@@ -163,12 +167,12 @@ pnpm sync:daily -- --source=all --case-study-only --max-case-studies=3 --dry-run
 - 付费陡增的原因
 - 风险：不要踩什么坑
 
-注意：PH/HN 本身没有真实「上月付费行为陡增」数据，所以文档会把该字段标为 `未验证`，不会编造增长百分比。它的价值是把热点拆成更接近付款动作的产品案例，而不是证明这些产品已经赚钱。
+注意：PH/HN 本身没有真实「上月付费行为陡增」数据，所以文档会把该字段标为 `未验证`，不会编造增长百分比。它的价值是把热点拆成更接近付款动作的产品案例，而不是证明这些产品已经赚钱。默认每天只深拆 1 个，核心是帮你决定「今天做不做这个切口」，不是继续扩充阅读材料。
 
 GitHub Actions 当前会每天运行：
 
 ```bash
-pnpm sync:daily -- --opportunity --case-study
+pnpm sync:daily -- --opportunity --case-study --max-opportunity-items=3 --max-case-studies=1
 ```
 
 因此每天会创建普通内容列表，并额外创建：
