@@ -23,8 +23,11 @@ const markdown = formatPHProducts([product], "popular");
 const xml = markdownToLarkXml("Product Hunt 热门产品 - 2026-06-22", markdown);
 
 assert.match(xml, /^<title>Product Hunt 热门产品 - 2026-06-22<\/title>/);
+assert.match(xml, /<h2>今天先看这 1 个<\/h2>/);
 assert.match(xml, /<h2>1\. Skybridge &amp; Co<\/h2>/);
-assert.match(xml, /<p><b>简介<\/b>: 用 React 构建 MCP 应用。<\/p>/);
+assert.match(xml, /<p><b>一句话<\/b>: 用 React 构建 MCP 应用。<\/p>/);
+assert.match(xml, /<b>可抄切口<\/b>/);
+assert.match(xml, /<b>30 分钟验证<\/b>/);
 assert.match(
   xml,
   /<li><b>链接<\/b>: <a href="https:\/\/www\.producthunt\.com\/products\/skybridge\?utm_campaign=x&amp;utm_medium=y">访问产品<\/a><\/li>/

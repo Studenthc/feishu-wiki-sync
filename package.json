@@ -5,6 +5,7 @@
   "packageManager": "pnpm@9.15.9",
   "scripts": {
     "sync:daily": "tsx scripts/sync-daily.ts",
+    "test:formatter": "tsx scripts/lib/formatter.test.ts",
     "test:opportunity": "tsx scripts/lib/opportunity.test.ts",
     "test:case-study": "tsx scripts/lib/case-study.test.ts",
     "test:lark-doc-xml": "tsx scripts/lib/lark-doc-xml.test.ts",
