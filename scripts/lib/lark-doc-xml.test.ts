@@ -23,7 +23,7 @@ const markdown = formatPHProducts([product], "popular");
 const xml = markdownToLarkXml("Product Hunt 热门产品 - 2026-06-22", markdown);
 
 assert.match(xml, /^<title>Product Hunt 热门产品 - 2026-06-22<\/title>/);
-assert.match(xml, /<h2>今天先看这 1 个<\/h2>/);
+assert.match(xml, /<h2>今天没有强候选<\/h2>/);
 assert.match(xml, /<h2>1\. Skybridge &amp; Co<\/h2>/);
 assert.match(xml, /<p><b>一句话<\/b>: 用 React 构建 MCP 应用。<\/p>/);
 assert.match(xml, /<b>可抄切口<\/b>/);

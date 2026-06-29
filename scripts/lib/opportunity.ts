@@ -1,6 +1,7 @@
 import type { HNStory } from "./hacker-news";
 import type { PHProduct } from "./product-hunt";
 import { assertChineseAvailable, getChineseProvider } from "./chinese";
+import { selectAllOpportunities, type SelectedOpportunity } from "./opportunity-selector";
 
 export interface OpportunityInput {
   date: string;
@@ -94,8 +95,9 @@ export async function buildOpportunityRadar(
         "opportunityScore 必须等于 scoreBreakdown 五项之和；如果总分为 0，opportunityScore 输出 1。",
         "evidenceLevel 只能是 强证据、中证据、弱证据。只有同时具备痛点、搜索意图、变现证据时才能是强证据。",
         "followUpDecision 只能是 验证、观察、放弃。4-5 分一般是 验证，3 分一般是 观察，1-2 分一般是 放弃。",
-        "topPicks 输出 1 到 3 个今日最推荐验证的机会，必须来自 topOpportunities。",
+        "topPicks 输出 1 个今日最推荐验证的机会，必须来自 topOpportunities。除非没有任何可验证线索，不要输出多个主推。",
         "topPicks.actionToday 必须是当天最小动作，不允许写注册域名、搭建完整网站、做完整 SaaS。",
+        "必须在 dailyBrief 里明确写今天主机会是什么，以及为什么其他机会不如它。",
         "weeklyExperiments 给 3 个本周可做的验证实验，每个实验必须能用手工或单页完成。",
         "必须使用英文 JSON 键名：date, dailyBrief, topPicks, topOpportunities, keywordClusters, avoidList, weeklyExperiments。",
         "topPicks 每一项必须包含这些英文键名：title, why, actionToday。",
@@ -103,12 +105,13 @@ export async function buildOpportunityRadar(
         "keywordClusters 每一项必须包含这些英文键名：cluster, keywords, why。",
         "avoidList 每一项必须包含这些英文键名：name, reason。",
         "weeklyExperiments 每一项必须包含这些英文键名：idea, landingPageAngle, validationStep。",
-        "只要输入 products 或 stories 非空，topOpportunities 至少输出 5 项，keywordClusters 至少输出 3 项，avoidList 至少输出 2 项，weeklyExperiments 至少输出 3 项。",
+        "只要输入 products 或 stories 非空，topOpportunities 输出 1 到 maxItems 项，不要超过 maxItems；keywordClusters 至少输出 2 项，avoidList 至少输出 2 项，weeklyExperiments 至少输出 3 项。",
         "严格按这个 JSON 形状输出：",
         '{"date":"YYYY-MM-DD","dailyBrief":"中文今日总览","topPicks":[{"title":"中文机会标题","why":"中文推荐理由","actionToday":"中文今日最小动作"}],"topOpportunities":[{"title":"中文机会标题","source":"Product Hunt","originalName":"原产品或新闻名","summary":"中文一句话简介","demand":"中文需求判断","targetUsers":"中文目标用户","monetization":"中文变现方式","seoKeywords":["中文关键词"],"siteIdeas":["中文页面或工具想法"],"scoreBreakdown":{"painEvidence":1,"searchIntent":1,"monetizationProof":0,"mvpFit":1,"contentFit":1},"opportunityScore":4,"scoreReason":"中文评分理由","evidenceLevel":"中证据","followUpDecision":"验证","nextValidationStep":"中文验证动作","actionToday":["中文今日动作1","中文今日动作2"],"missingEvidence":["中文缺失证据1"],"contentAngle":"中文内容选题角度","buildAngle":"中文最小建站角度","shortVideoAngle":"中文短视频讲法","url":"https://example.com"}],"keywordClusters":[{"cluster":"中文集群名","keywords":["中文关键词"],"why":"中文理由"}],"avoidList":[{"name":"中文名称","reason":"中文理由"}],"weeklyExperiments":[{"idea":"中文实验","landingPageAngle":"中文落地页角度","validationStep":"中文验证动作"}]}',
       ].join("\n"),
       {
         date: input.date,
+        maxItems: input.maxItems,
         products: input.products.slice(0, input.maxItems).map((product) => ({
           name: product.name,
           tagline: product.taglineZh || product.tagline,
@@ -257,6 +260,7 @@ export function formatOpportunityRadar(radar: OpportunityRadar): string {
   let md = `# 每日机会雷达 - ${radar.date}\n\n`;
   md += `> 面向上站赚钱：从 Product Hunt / HackerNews 中提取需求、关键词、变现方式、验证动作和自媒体选题角度。\n\n`;
   md += `**今日判断**: ${radar.dailyBrief}\n\n`;
+  md += formatMainOpportunity(radar);
   md += `---\n\n`;
 
   md += `## 今日最值得验证\n\n`;
@@ -327,6 +331,42 @@ export function formatOpportunityRadar(radar: OpportunityRadar): string {
   return md;
 }
 
+function formatMainOpportunity(radar: OpportunityRadar): string {
+  const main = getMainOpportunity(radar);
+  if (!main) {
+    return `## 今日主机会\n\n今天没有足够明确的主机会，建议只观察，不要开做。\n\n`;
+  }
+
+  return [
+    "## 今日主机会",
+    "",
+    `**${main.title}**`,
+    "",
+    `- **为什么是它**: ${main.scoreReason}`,
+    `- **先做什么**: ${main.buildAngle}`,
+    `- **今天 30 分钟动作**: ${main.actionToday[0] || main.nextValidationStep}`,
+    `- **不要做什么**: 不要做完整 SaaS，不要注册一堆域名，不要把热点当作付费证据。`,
+    `- **放弃标准**: ${main.missingEvidence[0] || "如果找不到搜索、竞品变现或用户痛点证据，今天就降级为素材。"}`,
+    "",
+  ].join("\n");
+}
+
+function getMainOpportunity(radar: OpportunityRadar): OpportunityItem | undefined {
+  const pickTitle = radar.topPicks[0]?.title;
+  const byPick = radar.topOpportunities.find((item) => item.title === pickTitle);
+  if (byPick) {
+    return byPick;
+  }
+
+  return [...radar.topOpportunities].sort((a, b) => {
+    const scoreDelta = b.opportunityScore - a.opportunityScore;
+    if (scoreDelta !== 0) {
+      return scoreDelta;
+    }
+    return Number(b.followUpDecision === "验证") - Number(a.followUpDecision === "验证");
+  })[0];
+}
+
 function buildFallbackActions(keywords: string[]): string[] {
   const keywordText = keywords.filter(Boolean).slice(0, 3).join("、");
   return [
@@ -345,122 +385,18 @@ function buildFallbackMissingEvidence(): string[] {
 }
 
 function buildFallbackRadar(input: OpportunityInput): OpportunityRadar {
-  const productItems = input.products.slice(0, input.maxItems).map((product) => ({
-    title: `${product.name} 相关需求`,
-    source: "Product Hunt" as const,
-    originalName: product.name,
-    summary:
-      product.summaryZh ||
-      product.descriptionZh ||
-      product.description ||
-      product.taglineZh ||
-      product.tagline,
-    demand:
-      product.descriptionZh ||
-      product.description ||
-      product.taglineZh ||
-      product.tagline,
-    targetUsers: "需要解决该场景问题的个人用户、团队或小企业",
-    monetization: "先用内容页或轻量工具页验证搜索需求，再考虑 SaaS、模板或 affiliate",
-    seoKeywords: [
-      product.name,
-      product.taglineZh || product.tagline,
-      `${product.name} 替代品`,
-    ],
-    siteIdeas: [
-      `${product.name} 介绍页`,
-      `${product.name} 替代品列表`,
-      `${product.name} 使用场景工具页`,
-    ],
-    scoreBreakdown: buildFallbackScoreBreakdown(
-      Math.min(5, Math.max(1, Math.ceil((product.commentsCount || 1) / 30)))
-    ),
-    opportunityScore: Math.min(
-      5,
-      Math.max(1, Math.ceil((product.commentsCount || 1) / 30))
-    ),
-    scoreReason: "基于 Product Hunt 评论量做初步热度估计，需要再查搜索需求。",
-    evidenceLevel: getEvidenceLevel(
-      Math.min(5, Math.max(1, Math.ceil((product.commentsCount || 1) / 30)))
-    ),
-    followUpDecision: getFollowUpDecision(
-      Math.min(5, Math.max(1, Math.ceil((product.commentsCount || 1) / 30)))
-    ),
-    nextValidationStep: "搜索相关关键词，记录竞品页面、广告投放和用户抱怨。",
-    actionToday: buildFallbackActions([
-      product.name,
-      product.taglineZh || product.tagline,
-      `${product.name} 替代品`,
-    ]),
-    missingEvidence: buildFallbackMissingEvidence(),
-    contentAngle: `用一个具体场景讲清楚 ${product.name} 背后的痛点，而不是介绍产品本身。`,
-    buildAngle: `${product.name} 替代品页、对比页或模板页，先不做完整 SaaS。`,
-    shortVideoAngle: `用 30 秒讲清楚 ${product.name} 背后的具体痛点，再给出一个可做成网站的替代方案。`,
-    url: product.url,
-  }));
-
-  const storyItems = input.stories.slice(0, input.maxItems).map((story) => ({
-    title: story.titleZh || story.title,
-    source: "HackerNews" as const,
-    originalName: story.title,
-    summary:
-      story.summaryZh ||
-      story.summary ||
-      `围绕 ${story.title} 的讨论可能代表一个内容或工具需求。`,
-    demand:
-      story.summaryZh ||
-      story.summary ||
-      `围绕 ${story.title} 的讨论可能代表一个内容或工具需求。`,
-    targetUsers: "关注该技术、工具或市场变化的专业用户",
-    monetization: "内容站 SEO、工具页、newsletter 或相关产品 affiliate",
-    seoKeywords: [
-      story.titleZh || story.title,
-      `${story.siteName || "相关"} 工具`,
-      "替代方案",
-    ],
-    siteIdeas: [
-      `${story.titleZh || story.title} 解读`,
-      "相关工具清单",
-      "问题解决指南",
-    ],
-    scoreBreakdown: buildFallbackScoreBreakdown(
-      Math.min(5, Math.max(1, Math.ceil((story.descendants || 1) / 80)))
-    ),
-    opportunityScore: Math.min(
-      5,
-      Math.max(1, Math.ceil((story.descendants || 1) / 80))
-    ),
-    scoreReason: "基于 HackerNews 评论量做初步热度估计，需要验证是否有商业搜索意图。",
-    evidenceLevel: getEvidenceLevel(
-      Math.min(5, Math.max(1, Math.ceil((story.descendants || 1) / 80)))
-    ),
-    followUpDecision: getFollowUpDecision(
-      Math.min(5, Math.max(1, Math.ceil((story.descendants || 1) / 80)))
-    ),
-    nextValidationStep: "查看评论区痛点，提取反复出现的问题和付费场景。",
-    actionToday: buildFallbackActions([
-      story.titleZh || story.title,
-      `${story.siteName || "相关"} 工具`,
-      "替代方案",
-    ]),
-    missingEvidence: buildFallbackMissingEvidence(),
-    contentAngle: "用这条讨论里的冲突切入，讲清楚谁在痛、为什么现在痛。",
-    buildAngle: "先做解读页、工具清单或检查清单，不做完整平台。",
-    shortVideoAngle: `用这条 HN 讨论切入，讲清楚开发者为什么关心它，以及能不能拆成一个轻量工具站。`,
-    url: story.url,
-  }));
-
-  const topOpportunities = [...productItems, ...storyItems].slice(0, input.maxItems);
+  const selected = selectAllOpportunities(input).slice(0, input.maxItems);
+  const topOpportunities = selected.map(toOpportunityItem);
+  const main = topOpportunities[0];
 
   return {
     date: input.date,
     dailyBrief:
-      topOpportunities.length > 0
-        ? "今天的内容适合先从高评论产品和高讨论新闻里找长尾工具站机会，优先验证搜索需求和付费场景。"
+      main
+        ? `今天主机会是「${main.title}」。先用 30 分钟验证搜索、竞品变现和用户痛点；其他热点只当素材，不要分散开做。`
         : "今天没有抓到可分析内容。",
     topPicks: topOpportunities
-      .filter((item) => item.opportunityScore >= 4)
-      .slice(0, 3)
+      .slice(0, 1)
       .map((item) => ({
         title: item.title,
         why: `${item.evidenceLevel}，${item.scoreReason}`,
@@ -511,6 +447,32 @@ function buildFallbackRadar(input: OpportunityInput): OpportunityRadar {
         validationStep: "发布后记录收录、点击和外部社区回复，决定是否继续做站群页面。",
       },
     ],
+  };
+}
+
+function toOpportunityItem(item: SelectedOpportunity): OpportunityItem {
+  return {
+    title: item.title,
+    source: item.source,
+    originalName: item.originalName,
+    summary: item.summary,
+    demand: item.demand,
+    targetUsers: item.targetUsers,
+    monetization: item.monetization,
+    seoKeywords: item.seoKeywords,
+    siteIdeas: item.siteIdeas,
+    scoreBreakdown: buildFallbackScoreBreakdown(item.score),
+    opportunityScore: item.score,
+    scoreReason: item.scoreReason,
+    evidenceLevel: item.evidenceLevel,
+    followUpDecision: item.followUpDecision,
+    nextValidationStep: item.actionToday[0],
+    actionToday: item.actionToday,
+    missingEvidence: item.missingEvidence,
+    contentAngle: item.contentAngle,
+    buildAngle: item.buildAngle,
+    shortVideoAngle: item.shortVideoAngle,
+    url: item.url,
   };
 }
 

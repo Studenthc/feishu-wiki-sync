@@ -19,13 +19,13 @@ const products: PHProduct[] = Array.from({ length: 7 }, (_, index) => ({
 
 const phMarkdown = formatPHProducts(products, "popular");
 
-assert.match(phMarkdown, /今天先看这 3 个/);
+assert.match(phMarkdown, /今天先看这 1 个/);
 assert.match(phMarkdown, /可抄切口/);
 assert.match(phMarkdown, /30 分钟验证/);
 assert.match(phMarkdown, /不要抄什么/);
 assert.match(phMarkdown, /其余候选只做索引/);
-assert.match(phMarkdown, /AI Gateway 成本\/模型\/替代品/);
-assert.doesNotMatch(phMarkdown, /## 6\. Product 6/);
+assert.match(phMarkdown, /AI 工具成本计算器或替代品对比页/);
+assert.doesNotMatch(phMarkdown, /## 2\. Product 2/);
 
 const stories: HNStory[] = Array.from({ length: 7 }, (_, index) => ({
   id: index + 1,
@@ -55,12 +55,12 @@ const stories: HNStory[] = Array.from({ length: 7 }, (_, index) => ({
 
 const hnMarkdown = formatHNStories(stories, "top");
 
-assert.match(hnMarkdown, /今天先看这 3 条/);
+assert.match(hnMarkdown, /今天先看这 2 条/);
 assert.match(hnMarkdown, /可抄切口/);
 assert.match(hnMarkdown, /30 分钟验证/);
 assert.match(hnMarkdown, /不要抄什么/);
 assert.match(hnMarkdown, /其余候选只做索引/);
-assert.match(hnMarkdown, /AI 工具成本、模型选择或替代品对比页/);
+assert.match(hnMarkdown, /AI 工具成本计算器或替代品对比页/);
 assert.match(hnMarkdown, /Self-Hosted LinkedIn Profile/);
 assert.doesNotMatch(hnMarkdown, /Marfa Public Radio Puts You to Sleep\*\*：做一个 AI 工具成本/);
 assert.doesNotMatch(hnMarkdown, /## 6\. Story 6/);
@@ -83,7 +83,7 @@ const aiVisibilityMarkdown = formatHNStories(
   "new"
 );
 
-assert.match(aiVisibilityMarkdown, /品牌 AI 可见度检测、竞品对比或获客诊断报告页/);
+assert.match(aiVisibilityMarkdown, /手工版 AI 可见度审计报告/);
 assert.doesNotMatch(aiVisibilityMarkdown, /安全检查清单/);
 
 const researchMarkdown = formatHNStories(
@@ -105,5 +105,27 @@ const researchMarkdown = formatHNStories(
 );
 
 assert.doesNotMatch(researchMarkdown, /AI 工具成本、模型选择或替代品对比页/);
+
+const weakNewsMarkdown = formatHNStories(
+  [
+    {
+      id: 101,
+      title: "Gen Z's AI problem isn't about AI",
+      url: "https://example.com/ai-opinion",
+      by: "writer",
+      score: 3,
+      descendants: 0,
+      time: 1_782_662_400,
+      summary:
+        "A cultural essay about students, schools, and changing technology habits.",
+      siteName: "example.com",
+    },
+  ],
+  "new"
+);
+
+assert.match(weakNewsMarkdown, /今天没有强候选/);
+assert.doesNotMatch(weakNewsMarkdown, /今天先看这 1 条/);
+assert.doesNotMatch(weakNewsMarkdown, /AI 工具成本、模型选择或替代品对比页/);
 
 console.log("formatter test passed");

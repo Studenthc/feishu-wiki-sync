@@ -1,5 +1,11 @@
 import assert from "node:assert/strict";
-import { formatCaseStudyReport, type CaseStudyReport } from "./case-study";
+import {
+  buildCaseStudyReport,
+  formatCaseStudyReport,
+  type CaseStudyReport,
+} from "./case-study";
+import type { HNStory } from "./hacker-news";
+import type { PHProduct } from "./product-hunt";
 
 const report: CaseStudyReport = {
   date: "2026-06-21",
@@ -99,3 +105,71 @@ assert.match(markdown, /AI API 月账单估算器/);
 assert.match(markdown, /今天只深拆 2 个/);
 
 console.log("case study formatter test passed");
+
+const originalKeys = {
+  APIMART_TEXT_API_KEY: process.env.APIMART_TEXT_API_KEY,
+  APIMART_API_KEY: process.env.APIMART_API_KEY,
+  GRSAI_API_KEY: process.env.GRSAI_API_KEY,
+  GEMINI_API_KEY: process.env.GEMINI_API_KEY,
+  OPENAI_API_KEY: process.env.OPENAI_API_KEY,
+  REQUIRE_CHINESE: process.env.REQUIRE_CHINESE,
+};
+
+delete process.env.APIMART_TEXT_API_KEY;
+delete process.env.APIMART_API_KEY;
+delete process.env.GRSAI_API_KEY;
+delete process.env.GEMINI_API_KEY;
+delete process.env.OPENAI_API_KEY;
+delete process.env.REQUIRE_CHINESE;
+
+const fallbackProducts: PHProduct[] = [
+  {
+    id: "spira",
+    name: "Spira for Product Hunt Makers",
+    tagline: "AI agents for Product Hunt launch promotion",
+    description: "Create and publish social posts for Product Hunt launches.",
+    url: "https://example.com/spira",
+    thumbnail: { url: "" },
+    reviewsCount: 60,
+    commentsCount: 20,
+  },
+];
+
+const fallbackStories: HNStory[] = [
+  {
+    id: 1,
+    title: "HackerRank open sourced their ATS and my resume score changed",
+    titleZh: "HackerRank 开源了其 ATS 系统，我的简历得分发生变化",
+    url: "https://example.com/ats",
+    by: "dan",
+    score: 180,
+    descendants: 120,
+    time: 1_782_662_400,
+    summary:
+      "Developers discuss ATS resume scoring, resume formatting, and job-search anxiety.",
+    siteName: "example.com",
+  },
+];
+
+const fallbackReport = await buildCaseStudyReport({
+  date: "2026-06-29",
+  products: fallbackProducts,
+  stories: fallbackStories,
+  maxCases: 1,
+});
+
+assert.equal(fallbackReport.cases[0]?.productName, "ATS 简历优化检查清单");
+assert.match(fallbackReport.cases[0]?.copyThis || "", /程序员 ATS 简历自查清单/);
+assert.match(fallbackReport.summary, /ATS 简历优化检查清单/);
+
+restoreKeys(originalKeys);
+
+function restoreKeys(values: Record<string, string | undefined>) {
+  Object.entries(values).forEach(([name, value]) => {
+    if (value === undefined) {
+      delete process.env[name];
+      return;
+    }
+    process.env[name] = value;
+  });
+}

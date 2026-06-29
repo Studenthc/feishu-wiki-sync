@@ -6,6 +6,7 @@
   "scripts": {
     "sync:daily": "tsx scripts/sync-daily.ts",
     "test:formatter": "tsx scripts/lib/formatter.test.ts",
+    "test:selector": "tsx scripts/lib/opportunity-selector.test.ts",
     "test:opportunity": "tsx scripts/lib/opportunity.test.ts",
     "test:case-study": "tsx scripts/lib/case-study.test.ts",
     "test:lark-doc-xml": "tsx scripts/lib/lark-doc-xml.test.ts",

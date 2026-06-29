@@ -1,5 +1,10 @@
 import type { PHProduct } from "./product-hunt";
 import type { HNStory } from "./hacker-news";
+import {
+  selectProductOpportunities,
+  selectStoryOpportunities,
+  type SelectedOpportunity,
+} from "./opportunity-selector";
 
 const FEATURED_LIMIT = 5;
 const QUICK_PICK_LIMIT = 3;
@@ -7,23 +12,32 @@ const INDEX_LIMIT = 12;
 
 export function formatPHProducts(products: PHProduct[], type: "popular" | "new"): string {
   const title = type === "popular" ? "Product Hunt 热门产品" : "Product Hunt 今日新品";
-  const rankedProducts = rankProducts(products, type);
-  const featured = rankedProducts.slice(0, FEATURED_LIMIT);
-  const indexed = rankedProducts.slice(FEATURED_LIMIT, INDEX_LIMIT);
+  const selected = selectProductOpportunities(products);
+  const rankedProducts = rankProductsByOpportunity(products, selected);
+  const opportunities = mapByOriginalName(selected);
+  const featured = selectFeaturedProducts(rankedProducts, opportunities);
+  const featuredNames = new Set(featured.map((product) => product.name));
+  const indexed = rankedProducts
+    .filter((product) => !featuredNames.has(product.name))
+    .slice(0, INDEX_LIMIT);
 
   let md = `# ${title}\n\n`;
   md += `> 更新时间: ${new Date().toLocaleString("zh-CN")}\n\n`;
-  md += `> 这不是产品搬运列表。默认只展开最值得看的 ${featured.length} 个，其余只保留索引，重点判断能不能拆成小团队可验证的页面、工具、模板或内容选题。\n\n`;
-  md += formatPHQuickPicks(featured);
+  md += `> 这不是产品搬运列表。本次只展开达到「观察」或「验证」级别的 ${featured.length} 个候选，其余只保留索引，重点判断能不能拆成小团队可验证的页面、工具、模板或内容选题。\n\n`;
+  md += formatQuickPicks(
+    selected,
+    "个"
+  );
   md += `---\n\n`;
 
   featured.forEach((product, index) => {
     md += `## ${index + 1}. ${product.name}\n\n`;
+    const opportunity = opportunities.get(product.name);
     md += `**一句话**: ${summarizeProduct(product)}\n\n`;
-    md += `- **值不值得看**: ${buildProductVerdict(product)}\n`;
-    md += `- **可抄切口**: ${buildProductCopyAngle(product)}\n`;
-    md += `- **30 分钟验证**: ${buildProductValidation(product)}\n`;
-    md += `- **不要抄什么**: 不要抄完整产品、账号体系和复杂协作流程，只看它背后的单一付费场景。\n`;
+    md += `- **值不值得看**: ${buildVerdict(opportunity, getProductScore(product))}\n`;
+    md += `- **可抄切口**: ${opportunity?.copyAngle || buildProductCopyAngle(product)}\n`;
+    md += `- **30 分钟验证**: ${opportunity?.actionToday[0] || buildProductValidation(product)}\n`;
+    md += `- **不要抄什么**: ${opportunity?.doNotCopy || "不要抄完整产品、账号体系和复杂协作流程，只看它背后的单一付费场景。"}\n`;
     md += `- **链接**: ${product.url ? `[访问产品](${product.url})` : "未提供"}\n`;
     md += `- **热度信号**: ${product.reviewsCount} 个评分，${product.commentsCount} 条评论\n`;
     if (product.thumbnail?.url) {
@@ -39,23 +53,32 @@ export function formatPHProducts(products: PHProduct[], type: "popular" | "new")
 
 export function formatHNStories(stories: HNStory[], type: "top" | "new"): string {
   const title = type === "top" ? "HackerNews 热门新闻" : "HackerNews 最新新闻";
-  const rankedStories = rankStories(stories, type);
-  const featured = rankedStories.slice(0, FEATURED_LIMIT);
-  const indexed = rankedStories.slice(FEATURED_LIMIT, INDEX_LIMIT);
+  const selected = selectStoryOpportunities(stories);
+  const rankedStories = rankStoriesByOpportunity(stories, selected);
+  const opportunities = mapByOriginalName(selected);
+  const featured = selectFeaturedStories(rankedStories, opportunities);
+  const featuredTitles = new Set(featured.map((story) => story.title));
+  const indexed = rankedStories
+    .filter((story) => !featuredTitles.has(story.title))
+    .slice(0, INDEX_LIMIT);
 
   let md = `# ${title}\n\n`;
   md += `> 更新时间: ${new Date().toLocaleString("zh-CN")}\n\n`;
-  md += `> 这不是新闻搬运列表。默认只展开最值得看的 ${featured.length} 条，重点提取需求、可抄切口和今天能验证的动作。\n\n`;
-  md += formatHNQuickPicks(featured);
+  md += `> 这不是新闻搬运列表。本次只展开达到「观察」或「验证」级别的 ${featured.length} 条候选，重点提取需求、可抄切口和今天能验证的动作。\n\n`;
+  md += formatQuickPicks(
+    selected,
+    "条"
+  );
   md += `---\n\n`;
 
   featured.forEach((story, index) => {
     md += `## ${index + 1}. ${story.titleZh || story.title}\n\n`;
+    const opportunity = opportunities.get(story.title);
     md += `**一句话**: ${summarizeStory(story)}\n\n`;
-    md += `- **值不值得看**: ${buildStoryVerdict(story)}\n`;
-    md += `- **可抄切口**: ${buildStoryCopyAngle(story)}\n`;
-    md += `- **30 分钟验证**: ${buildStoryValidation(story)}\n`;
-    md += `- **不要抄什么**: 不要复述新闻或做泛资讯站，只抄讨论背后的问题、清单、对比或小工具。\n`;
+    md += `- **值不值得看**: ${buildVerdict(opportunity, getStoryScore(story))}\n`;
+    md += `- **可抄切口**: ${opportunity?.copyAngle || buildStoryCopyAngle(story)}\n`;
+    md += `- **30 分钟验证**: ${opportunity?.actionToday[0] || buildStoryValidation(story)}\n`;
+    md += `- **不要抄什么**: ${opportunity?.doNotCopy || "不要复述新闻或做泛资讯站，只抄讨论背后的问题、清单、对比或小工具。"}\n`;
     md += `- **作者**: ${story.by}\n`;
     md += `- **热度信号**: ${story.score} 分，${story.descendants || 0} 条评论\n`;
     md += `- **发布时间**: ${new Date(story.time * 1000).toLocaleString("zh-CN")}\n`;
@@ -92,32 +115,60 @@ function summarizeStory(story: HNStory): string {
   );
 }
 
-function formatPHQuickPicks(products: PHProduct[]): string {
-  if (products.length === 0) {
-    return `## 今天没有可看的 PH 候选\n\n`;
+function formatQuickPicks(items: SelectedOpportunity[], unit: "个" | "条"): string {
+  const diversified = diversifyQuickPicks(
+    items.filter((item) => item.followUpDecision === "验证")
+  );
+  if (diversified.length === 0) {
+    return `## 今天没有强候选\n\n没有达到「验证」级别的机会，先只浏览下面索引，不建议今天直接开做。\n\n`;
   }
 
-  let md = `## 今天先看这 ${Math.min(products.length, QUICK_PICK_LIMIT)} 个\n\n`;
-  products.slice(0, QUICK_PICK_LIMIT).forEach((product, index) => {
-    md += `${index + 1}. **${product.name}**：${buildProductCopyAngle(product)}\n`;
-    md += `   - 先验证：${buildProductValidation(product)}\n`;
+  let md = `## 今天先看这 ${Math.min(diversified.length, QUICK_PICK_LIMIT)} ${unit}\n\n`;
+  diversified.slice(0, QUICK_PICK_LIMIT).forEach((item, index) => {
+    md += `${index + 1}. **${item.title}**：${item.copyAngle}\n`;
+    md += `   - 先验证：${item.actionToday[0]}\n`;
   });
   md += `\n`;
   return md;
 }
 
-function formatHNQuickPicks(stories: HNStory[]): string {
-  if (stories.length === 0) {
-    return `## 今天没有可看的 HN 候选\n\n`;
+function diversifyQuickPicks(items: SelectedOpportunity[]): SelectedOpportunity[] {
+  const picked: SelectedOpportunity[] = [];
+  const seenTitles = new Set<string>();
+  const seenCategories = new Set<string>();
+
+  for (const item of items) {
+    const titleKey = item.title.trim().toLowerCase();
+    if (seenTitles.has(titleKey)) {
+      continue;
+    }
+
+    const categoryKey = item.category === "generic" ? titleKey : item.category;
+    if (seenCategories.has(categoryKey)) {
+      continue;
+    }
+
+    picked.push(item);
+    seenTitles.add(titleKey);
+    seenCategories.add(categoryKey);
+
+    if (picked.length >= QUICK_PICK_LIMIT) {
+      return picked;
+    }
   }
 
-  let md = `## 今天先看这 ${Math.min(stories.length, QUICK_PICK_LIMIT)} 条\n\n`;
-  stories.slice(0, QUICK_PICK_LIMIT).forEach((story, index) => {
-    md += `${index + 1}. **${story.titleZh || story.title}**：${buildStoryCopyAngle(story)}\n`;
-    md += `   - 先验证：${buildStoryValidation(story)}\n`;
-  });
-  md += `\n`;
-  return md;
+  for (const item of items) {
+    const titleKey = item.title.trim().toLowerCase();
+    if (!seenTitles.has(titleKey)) {
+      picked.push(item);
+      seenTitles.add(titleKey);
+    }
+    if (picked.length >= QUICK_PICK_LIMIT) {
+      break;
+    }
+  }
+
+  return picked;
 }
 
 function formatPHIndex(products: PHProduct[]): string {
@@ -132,6 +183,34 @@ function formatPHIndex(products: PHProduct[]): string {
   return md;
 }
 
+function selectFeaturedProducts(
+  rankedProducts: PHProduct[],
+  opportunities: Map<string, SelectedOpportunity>
+): PHProduct[] {
+  const candidates = rankedProducts.filter(
+    (product) => opportunities.get(product.name)?.followUpDecision !== "放弃"
+  );
+  const hasValidation = candidates.some(
+    (product) => opportunities.get(product.name)?.followUpDecision === "验证"
+  );
+
+  return candidates.slice(0, hasValidation ? FEATURED_LIMIT : 2);
+}
+
+function selectFeaturedStories(
+  rankedStories: HNStory[],
+  opportunities: Map<string, SelectedOpportunity>
+): HNStory[] {
+  const candidates = rankedStories.filter(
+    (story) => opportunities.get(story.title)?.followUpDecision !== "放弃"
+  );
+  const hasValidation = candidates.some(
+    (story) => opportunities.get(story.title)?.followUpDecision === "验证"
+  );
+
+  return candidates.slice(0, hasValidation ? FEATURED_LIMIT : 2);
+}
+
 function formatHNIndex(stories: HNStory[]): string {
   let md = `## 其余候选只做索引\n\n`;
   if (stories.length === 0) {
@@ -144,20 +223,36 @@ function formatHNIndex(stories: HNStory[]): string {
   return md;
 }
 
-function rankProducts(products: PHProduct[], type: "popular" | "new"): PHProduct[] {
-  if (type === "new") {
-    return [...products].sort((a, b) => getProductScore(b) - getProductScore(a));
-  }
+function rankProductsByOpportunity(
+  products: PHProduct[],
+  opportunities: SelectedOpportunity[]
+): PHProduct[] {
+  const productsByName = new Map(products.map((product) => [product.name, product]));
+  const ranked = opportunities
+    .map((opportunity) => productsByName.get(opportunity.originalName))
+    .filter(isPHProduct);
+  const rankedNames = new Set(ranked.map((product) => product.name));
+  const leftovers = products
+    .filter((product) => !rankedNames.has(product.name))
+    .sort((a, b) => getProductScore(b) - getProductScore(a));
 
-  return [...products].sort((a, b) => getProductScore(b) - getProductScore(a));
+  return [...ranked, ...leftovers];
 }
 
-function rankStories(stories: HNStory[], type: "top" | "new"): HNStory[] {
-  if (type === "new") {
-    return [...stories].sort((a, b) => getStoryRankScore(b) - getStoryRankScore(a));
-  }
+function rankStoriesByOpportunity(
+  stories: HNStory[],
+  opportunities: SelectedOpportunity[]
+): HNStory[] {
+  const storiesByTitle = new Map(stories.map((story) => [story.title, story]));
+  const ranked = opportunities
+    .map((opportunity) => storiesByTitle.get(opportunity.originalName))
+    .filter(isHNStory);
+  const rankedTitles = new Set(ranked.map((story) => story.title));
+  const leftovers = stories
+    .filter((story) => !rankedTitles.has(story.title))
+    .sort((a, b) => getStoryScore(b) - getStoryScore(a));
 
-  return [...stories].sort((a, b) => getStoryRankScore(b) - getStoryRankScore(a));
+  return [...ranked, ...leftovers];
 }
 
 function getProductScore(product: PHProduct): number {
@@ -168,53 +263,39 @@ function getStoryScore(story: HNStory): number {
   return (story.descendants || 0) * 2 + (story.score || 0);
 }
 
-function getStoryRankScore(story: HNStory): number {
-  return getStoryCopyabilityScore(story) * 1000 + getStoryScore(story);
-}
-
-function getStoryCopyabilityScore(story: HNStory): number {
-  const text = `${story.title} ${story.summaryZh || story.summary || ""}`.toLowerCase();
-  let score = 0;
-
-  if (/show hn|launch|tool|app|library|github|open source|self-hosted|api|sdk|database|postgres|sql|devops|server|cloud/.test(text)) {
-    score += 3;
-  }
-  if (/(security|privacy|breach|exploit|vulnerability|cve|0-day|zero-day|compliance)/.test(text)) {
-    score += 3;
-  }
-  if (/\b(ai|llm)\b|openai|claude|gemini|token|prompt/.test(text)) {
-    score += 2;
-  }
-  if (/pricing|revenue|startup|marketing|sales|customer|conversion|competitor|visibility|brand|recommended by ai/.test(text)) {
-    score += 2;
-  }
-  if (/radio|music|politics|legislature|essay|history|movie|game|research|paper|hardware|ising|probabilistic computer/.test(text)) {
-    score -= 2;
+function buildVerdict(
+  opportunity: SelectedOpportunity | undefined,
+  fallbackScore: number
+): string {
+  if (opportunity) {
+    return `${opportunity.followUpDecision}。${opportunity.scoreReason}`;
   }
 
-  return score;
-}
-
-function buildProductVerdict(product: PHProduct): string {
-  const score = getProductScore(product);
-  if (score >= 80) {
+  if (fallbackScore >= 80) {
     return "优先看。它至少有较强讨论或评分信号，适合拆成一个更窄的验证切口。";
   }
-  if (score >= 25) {
+  if (fallbackScore >= 25) {
     return "可以看，但只当线索。先补搜索、定价和竞品证据。";
   }
   return "先观察。热度信号偏弱，不要直接开做。";
 }
 
-function buildStoryVerdict(story: HNStory): string {
-  const comments = story.descendants || 0;
-  if (comments >= 100) {
-    return "优先看。评论多，通常能从争议里提取真实痛点。";
-  }
-  if ((story.score || 0) >= 100 || comments >= 30) {
-    return "可以看，但要先确认是不是商业需求，不要只做资讯解读。";
-  }
-  return "先观察。讨论不足时，只适合做素材，不适合直接立项。";
+function mapByOriginalName(items: SelectedOpportunity[]): Map<string, SelectedOpportunity> {
+  return new Map(items.map((item) => [item.originalName, item]));
+}
+
+function isSelectedOpportunity(
+  item: SelectedOpportunity | undefined
+): item is SelectedOpportunity {
+  return item !== undefined;
+}
+
+function isPHProduct(product: PHProduct | undefined): product is PHProduct {
+  return product !== undefined;
+}
+
+function isHNStory(story: HNStory | undefined): story is HNStory {
+  return story !== undefined;
 }
 
 function buildProductCopyAngle(product: PHProduct): string {
@@ -242,16 +323,19 @@ function buildStoryCopyAngle(story: HNStory): string {
   const title = story.titleZh || story.title;
   const text = `${story.title} ${story.summaryZh || story.summary || ""}`.toLowerCase();
 
-  if (/\b(recommended by ai|ai visibility|visibility audit|brand|competitor|seo|marketing|customer acquisition)\b/i.test(text)) {
+  if (/\b(recommended by ai|ai visibility|visibility audit|chatgpt recommend|perplexity recommend|claude recommend|ai seo|llm visibility|generative engine optimization)\b/i.test(text)) {
     return `做一个品牌 AI 可见度检测、竞品对比或获客诊断报告页。`;
   }
-  if (/\b(security|privacy|breach|hack|exploit|vulnerability|cve|0-day|zero-day|compliance)\b|漏洞|隐私|安全/i.test(text)) {
+  if (/\b(age verification|age checks|kids act|online safety|child safety|moderation polic)\b|年龄验证|儿童安全|未成年人|合规/i.test(text)) {
+    return `做一个年龄验证/未成年人合规自查清单，按产品类型列风险和整改动作。`;
+  }
+  if (/\b(security|privacy|breach|hack|exploit|vulnerability|cve|0-day|zero-day)\b|漏洞|隐私|安全/i.test(text)) {
     return `做一个面向具体人群的安全检查清单或风险自测页。`;
   }
-  if (/\b(ai|llm|openai|claude|gemini|token|prompt)\b/i.test(text)) {
+  if (/\b(openai api|claude api|gemini api|llm ops|token|prompt|model routing|model gateway|inference cost|ai agent|ai workflow|rag|vector database)\b|模型成本|提示词|智能体/i.test(text)) {
     return `做一个 AI 工具成本、模型选择或替代品对比页。`;
   }
-  if (/\b(database|postgres|sql|server|cloud|devops|api|sdk|github|library|self-hosted)\b/i.test(text)) {
+  if (/\b(database|postgres|sql|server|cloud|devops|api|sdk|github|library|framework|mcp|self-hosted)\b/i.test(text)) {
     return `做一个开发者问题排查清单、配置生成器或工具对比页。`;
   }
   if (/\b(startup|pricing|funding|revenue|market|sales|marketing|customer)\b/i.test(text)) {
