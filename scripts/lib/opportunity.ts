@@ -69,6 +69,7 @@ export async function buildOpportunityRadar(
   input: OpportunityInput
 ): Promise<OpportunityRadar> {
   const provider = getChineseProvider();
+  const preferredOpportunity = selectAllOpportunities(input)[0];
   if (!provider) {
     assertChineseAvailable();
     return buildFallbackRadar(input);
@@ -96,6 +97,8 @@ export async function buildOpportunityRadar(
         "evidenceLevel 只能是 强证据、中证据、弱证据。只有同时具备痛点、搜索意图、变现证据时才能是强证据。",
         "followUpDecision 只能是 验证、观察、放弃。4-5 分一般是 验证，3 分一般是 观察，1-2 分一般是 放弃。",
         "topPicks 输出 1 个今日最推荐验证的机会，必须来自 topOpportunities。除非没有任何可验证线索，不要输出多个主推。",
+        "如果输入里有 preferredOpportunity，dailyBrief、topPicks[0] 和 topOpportunities[0] 必须围绕它；不要自行改主机会。",
+        "preferredOpportunity 是代码层面选出的今日主机会，模型只能补充表达和细节。",
         "topPicks.actionToday 必须是当天最小动作，不允许写注册域名、搭建完整网站、做完整 SaaS。",
         "必须在 dailyBrief 里明确写今天主机会是什么，以及为什么其他机会不如它。",
         "weeklyExperiments 给 3 个本周可做的验证实验，每个实验必须能用手工或单页完成。",
@@ -112,6 +115,7 @@ export async function buildOpportunityRadar(
       {
         date: input.date,
         maxItems: input.maxItems,
+        preferredOpportunity,
         products: input.products.slice(0, input.maxItems).map((product) => ({
           name: product.name,
           tagline: product.taglineZh || product.tagline,
@@ -129,11 +133,53 @@ export async function buildOpportunityRadar(
           url: story.url,
         })),
       }
-    ).then((radar) => ensureUsefulRadar(radar, input));
+    ).then((radar) =>
+      normalizeOpportunityRadar(radar, preferredOpportunity, input)
+    );
   } catch (error) {
     console.error("机会雷达生成失败，使用本地兜底:", error);
     return buildFallbackRadar(input);
   }
+}
+
+export function normalizeOpportunityRadarForTest(
+  radar: OpportunityRadar,
+  preferredOpportunity: SelectedOpportunity | undefined,
+  input: OpportunityInput
+): OpportunityRadar {
+  return normalizeOpportunityRadar(radar, preferredOpportunity, input);
+}
+
+function normalizeOpportunityRadar(
+  radar: OpportunityRadar,
+  preferredOpportunity: SelectedOpportunity | undefined,
+  input: OpportunityInput
+): OpportunityRadar {
+  const normalized = ensureUsefulRadar(radar, input);
+  if (!preferredOpportunity) {
+    return normalized;
+  }
+
+  const preferredItem = toOpportunityItem(preferredOpportunity);
+  const rest = normalized.topOpportunities.filter(
+    (item) =>
+      item.title !== preferredItem.title &&
+      item.originalName !== preferredItem.originalName
+  );
+  const topOpportunities = [preferredItem, ...rest].slice(0, input.maxItems);
+
+  return {
+    ...normalized,
+    dailyBrief: `今天主机会是「${preferredItem.title}」。先用 30 分钟验证搜索、竞品变现和用户痛点；其他热点只当素材，不要分散开做。`,
+    topPicks: [
+      {
+        title: preferredItem.title,
+        why: `${preferredItem.evidenceLevel}，${preferredItem.scoreReason}`,
+        actionToday: preferredItem.actionToday[0],
+      },
+    ],
+    topOpportunities,
+  };
 }
 
 function ensureUsefulRadar(

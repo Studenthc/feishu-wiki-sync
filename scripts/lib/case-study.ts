@@ -117,11 +117,46 @@ export async function buildCaseStudyReport(
           url: story.url,
         })),
       }
-    ).then((report) => ensureUsefulCaseStudyReport(report, input));
+    ).then((report) =>
+      normalizeCaseStudyReport(report, preferredOpportunity, input)
+    );
   } catch (error) {
     console.error("案例拆解生成失败，使用本地兜底:", error);
     return buildFallbackCaseStudyReport(input);
   }
+}
+
+export function normalizeCaseStudyReportForTest(
+  report: CaseStudyReport,
+  preferredOpportunity: SelectedOpportunity | undefined,
+  input: CaseStudyInput
+): CaseStudyReport {
+  return normalizeCaseStudyReport(report, preferredOpportunity, input);
+}
+
+function normalizeCaseStudyReport(
+  report: CaseStudyReport,
+  preferredOpportunity: SelectedOpportunity | undefined,
+  input: CaseStudyInput
+): CaseStudyReport {
+  const normalized = ensureUsefulCaseStudyReport(report, input);
+  if (!preferredOpportunity) {
+    return normalized;
+  }
+
+  const preferredCase = buildFallbackOpportunityCase(preferredOpportunity);
+  const rest = normalized.cases.filter(
+    (item) =>
+      item.productName !== preferredCase.productName &&
+      item.originalName !== preferredCase.originalName
+  );
+  const cases = [preferredCase, ...rest].slice(0, input.maxCases);
+
+  return {
+    ...normalized,
+    summary: `今天只深拆「${preferredOpportunity.title}」。先验证搜索、竞品变现和用户痛点，不要直接开做完整产品。`,
+    cases,
+  };
 }
 
 function ensureUsefulCaseStudyReport(

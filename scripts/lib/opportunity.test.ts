@@ -1,6 +1,13 @@
 import assert from "node:assert/strict";
 import { getChineseProvider } from "./chinese";
-import { formatOpportunityRadar, type OpportunityRadar } from "./opportunity";
+import {
+  formatOpportunityRadar,
+  normalizeOpportunityRadarForTest,
+  type OpportunityRadar,
+} from "./opportunity";
+import { selectAllOpportunities } from "./opportunity-selector";
+import type { HNStory } from "./hacker-news";
+import type { PHProduct } from "./product-hunt";
 
 const originalGrsAIKey = process.env.GRSAI_API_KEY;
 const originalGeminiKey = process.env.GEMINI_API_KEY;
@@ -114,6 +121,114 @@ assert.match(markdown, /缺少证据/);
 assert.match(markdown, /没有搜索量数据/);
 assert.match(markdown, /先做会议助手对比页和会议纪要模板页，不做完整 SaaS/);
 assert.match(markdown, /短视频脚本角度/);
+
+const databoxProduct: PHProduct = {
+  id: "databox",
+  name: "Databox Skills Marketplace",
+  tagline: "AI analytics report skills",
+  description: "A marketplace for analytics reports and AI skills.",
+  url: "https://example.com/databox",
+  thumbnail: { url: "" },
+  reviewsCount: 2,
+  commentsCount: 10,
+};
+
+const vpnStory: HNStory = {
+  id: 99,
+  title: "European Digital Identity Wallet is a gift to Google and Apple",
+  titleZh: "欧洲数字身份钱包是送给谷歌和苹果的礼物",
+  url: "https://example.com/eu-wallet",
+  by: "privacy",
+  score: 52,
+  descendants: 18,
+  time: 1_782_662_400,
+  summary:
+    "Privacy-focused discussion about trust, VPN alternatives, and platform lock-in.",
+  summaryZh: "围绕隐私、信任和 VPN 替代品的讨论。",
+  siteName: "example.com",
+};
+
+const preferred = selectAllOpportunities({
+  products: [databoxProduct],
+  stories: [vpnStory],
+})[0];
+
+const normalized = normalizeOpportunityRadarForTest(
+  {
+    date: "2026-06-30",
+    dailyBrief: "今日主机会是 Databox 的 AI 分析技能库。",
+    topPicks: [
+      {
+        title: "AI 分析技能库教程与模板站",
+        why: "模型错误选择了另一个机会。",
+        actionToday: "搜索 AI analytics report template。",
+      },
+    ],
+    topOpportunities: [
+      {
+        title: "AI 分析技能库教程与模板站",
+        source: "Product Hunt",
+        originalName: "Databox Skills Marketplace",
+        summary: "Databox 技能市场。",
+        demand: "营销人员需要报告模板。",
+        targetUsers: "营销人员",
+        monetization: "广告或模板售卖",
+        seoKeywords: ["AI analytics report template"],
+        siteIdeas: ["AI 报告模板站"],
+        scoreBreakdown: {
+          painEvidence: 1,
+          searchIntent: 1,
+          monetizationProof: 0,
+          mvpFit: 1,
+          contentFit: 1,
+        },
+        opportunityScore: 4,
+        scoreReason: "模型给出的错误主机会。",
+        evidenceLevel: "中证据",
+        followUpDecision: "验证",
+        nextValidationStep: "搜索关键词。",
+        actionToday: ["搜索 AI analytics report template。"],
+        missingEvidence: ["缺少付费证据。"],
+        contentAngle: "报告模板怎么做。",
+        buildAngle: "教程页。",
+        shortVideoAngle: "讲报告模板。",
+        url: "https://example.com/databox",
+      },
+    ],
+    keywordClusters: [
+      {
+        cluster: "AI 报告模板",
+        keywords: ["AI analytics report template", "Databox skills"],
+        why: "模型错误选择的关键词集群。",
+      },
+    ],
+    avoidList: [
+      {
+        name: "泛报告资讯",
+        reason: "缺少明确付费动作。",
+      },
+    ],
+    weeklyExperiments: [
+      {
+        idea: "Databox 教程页",
+        landingPageAngle: "写一个 AI 报告模板教程。",
+        validationStep: "搜索关键词并记录竞品。",
+      },
+    ],
+  },
+  preferred,
+  {
+    date: "2026-06-30",
+    products: [databoxProduct],
+    stories: [vpnStory],
+    maxItems: 3,
+  }
+);
+
+assert.equal(preferred?.title, "VPN 信任度与替代品对比");
+assert.equal(normalized.topPicks[0]?.title, preferred?.title);
+assert.equal(normalized.topOpportunities[0]?.title, preferred?.title);
+assert.match(normalized.dailyBrief, /VPN 信任度与替代品对比/);
 
 console.log("opportunity formatter test passed");
 

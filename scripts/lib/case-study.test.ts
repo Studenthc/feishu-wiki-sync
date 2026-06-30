@@ -2,10 +2,12 @@ import assert from "node:assert/strict";
 import {
   buildCaseStudyReport,
   formatCaseStudyReport,
+  normalizeCaseStudyReportForTest,
   type CaseStudyReport,
 } from "./case-study";
 import type { HNStory } from "./hacker-news";
 import type { PHProduct } from "./product-hunt";
+import { selectAllOpportunities } from "./opportunity-selector";
 
 const report: CaseStudyReport = {
   date: "2026-06-21",
@@ -161,6 +163,89 @@ const fallbackReport = await buildCaseStudyReport({
 assert.equal(fallbackReport.cases[0]?.productName, "ATS 简历优化检查清单");
 assert.match(fallbackReport.cases[0]?.copyThis || "", /程序员 ATS 简历自查清单/);
 assert.match(fallbackReport.summary, /ATS 简历优化检查清单/);
+
+const databoxProduct: PHProduct = {
+  id: "databox",
+  name: "Databox Skills Marketplace",
+  tagline: "AI analytics report skills",
+  description: "A marketplace for analytics reports and AI skills.",
+  url: "https://example.com/databox",
+  thumbnail: { url: "" },
+  reviewsCount: 2,
+  commentsCount: 10,
+};
+
+const vpnStory: HNStory = {
+  id: 99,
+  title: "European Digital Identity Wallet is a gift to Google and Apple",
+  titleZh: "欧洲数字身份钱包是送给谷歌和苹果的礼物",
+  url: "https://example.com/eu-wallet",
+  by: "privacy",
+  score: 52,
+  descendants: 18,
+  time: 1_782_662_400,
+  summary:
+    "Privacy-focused discussion about trust, VPN alternatives, and platform lock-in.",
+  summaryZh: "围绕隐私、信任和 VPN 替代品的讨论。",
+  siteName: "example.com",
+};
+
+const preferredCaseOpportunity = selectAllOpportunities({
+  products: [databoxProduct],
+  stories: [vpnStory],
+})[0];
+
+const normalizedCaseReport = normalizeCaseStudyReportForTest(
+  {
+    date: "2026-06-30",
+    summary: "本次分析围绕 Databox 展开。",
+    cases: [
+      {
+        title: "Databox AI 报告模板站",
+        source: "Product Hunt",
+        originalName: "Databox Skills Marketplace",
+        productName: "Databox",
+        url: "https://example.com/databox",
+        launchTime: "未验证",
+        paidGrowthSignal: "未验证；当前只有 PH 热度。",
+        evidenceLevel: "中证据",
+        whySelected: "模型错误选择 Databox。",
+        problem: "需要报告模板。",
+        users: "营销人员",
+        paymentReason: "节省报告制作时间。",
+        technicalPrinciple: "模板整理。",
+        copyStrategy: "做报告模板站。",
+        smallTeamWedges: ["报告模板"],
+        minimumMvp: "一页模板目录。",
+        validationActions: ["搜索 AI analytics report template。"],
+        growthReason: "报告需求。",
+        monetizationPath: "广告。",
+        risks: ["不要编造付费数据。"],
+        contentAngle: "报告模板。",
+        missingEvidence: ["缺少付费证据。"],
+        copyThis: "做报告模板站。",
+        doNotCopy: "不要做完整 BI。",
+        todayExecutionPlan: ["搜索关键词。"],
+        killCriteria: ["没有商业页面就放弃。"],
+      },
+    ],
+    rejected: [],
+  },
+  preferredCaseOpportunity,
+  {
+    date: "2026-06-30",
+    products: [databoxProduct],
+    stories: [vpnStory],
+    maxCases: 1,
+  }
+);
+
+assert.equal(preferredCaseOpportunity?.title, "VPN 信任度与替代品对比");
+assert.equal(
+  normalizedCaseReport.cases[0]?.productName,
+  preferredCaseOpportunity?.title
+);
+assert.match(normalizedCaseReport.summary, /VPN 信任度与替代品对比/);
 
 restoreKeys(originalKeys);
 
